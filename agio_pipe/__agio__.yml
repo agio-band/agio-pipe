@@ -1,0 +1,38 @@
+name: agio_pipe
+version: 0.0.1
+label: agio Pipe
+description: |
+  Base Pipeline Utils
+icon:
+tags:
+  - publish
+  - pipeline
+
+urls:
+  source_url: "https://github.com/agio-band/agio-pipe.git"
+  home_page: ""
+  documentation: ""
+  bug_tracker: "https://github.com/agio-band/agio-pipe/issues"
+
+required_packages: []
+
+plugins:
+  # commands
+  - label: Publish Command
+    implementations:
+      - module: plugins/commands/publish_cmd.py
+  # publish scene api
+  - label: Publish Scene Standalone
+    implementations:
+      - module: plugins/publish_scene/standalone_scene.py
+        apps:
+          - standalone
+
+settings:
+  local:
+#    layout: package_settings/local_layout.yml
+    model: package_settings.local_settings.PipeLocalSettings
+  workspace:
+#    layout: package_settings/workspace_layout.yml
+    model: package_settings.workspace_settings.PipeWorkspaceSettings
+
