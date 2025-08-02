@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from agio.core.entities import AProductType, ATask, AProductVersion
+from agio.core.domains import AProductType, ATask, AProductVersion
 
 
 class ExportContainerBase(ABC):

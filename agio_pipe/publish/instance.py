@@ -2,8 +2,9 @@ import uuid
 from dataclasses import dataclass, field, InitVar
 from typing import Any
 
-from agio.core.entities import AProductType, Entity, ATask
-from agio.core.entities.variant import AVariant
+from agio.core.domains import AProductType, AEntity
+from agio.core.domains.variant import AVariant
+from agio_pipe.entities.task import ATask
 
 
 @dataclass
@@ -22,7 +23,7 @@ class PublishInstance:
     metadata: dict[str, Any] = field(default_factory=dict)
     # post creation values
     task: ATask = field(init=False)
-    entity: Entity = field(init=False)
+    entity: AEntity = field(init=False)
     product_type: AProductType = field(init=False)
     variant: AVariant = field(init=False)
 
@@ -55,3 +56,7 @@ class PublishInstance:
             self.product_type.id == other.product_type_id,
             self.variant.id == other.variant,
         ])
+
+    @property
+    def project(self):
+        return

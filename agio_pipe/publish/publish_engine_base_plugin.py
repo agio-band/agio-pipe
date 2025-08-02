@@ -1,4 +1,4 @@
-from agio.core.entities import AProductVersion
+from agio.core.domains import AProductVersion
 from agio.core.plugins.base_plugin import APlugin
 from agio.core.plugins.mixins import BasePluginClass
 from agio_pipe.publish.instance import PublishInstance

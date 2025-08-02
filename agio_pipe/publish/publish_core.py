@@ -1,10 +1,11 @@
 from typing import Any
 
-from agio.core.entities import ATask, AProductType
-from agio.core.entities.variant import AVariant
+from agio.core.domains import AProductType
+from agio.core.domains.variant import AVariant
 from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
+from agio_pipe.entities.task import ATask
 
 
 class PublishCore:
