@@ -1,0 +1,27 @@
+sections:
+  help:
+    label: Pipeline
+    children:
+      publish:
+        label: Publish
+        content:
+        - type: GroupBox
+          label: Publish
+          name: publish_group
+          content:
+            - type: Parameter
+              name: publish_plugin
+            - type: Parameter
+              name: apply_burn_in
+            - type: Parameter
+              name: publish_templates
+
+            - type: Parameter
+              name: review_template
+              visible_if: apply_burn_in
+        - type: GroupBox
+          label: Products
+          name: publish_products
+          content:
+            - type: Text
+              text: 'TODO'

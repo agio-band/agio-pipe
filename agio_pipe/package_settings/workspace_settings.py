@@ -11,6 +11,7 @@ class PublishTemplate(BaseModel):
 
 class PipeWorkspaceSettings(APackageSettings):
     publish_plugin: str = PluginSelectField('publish_engine')
-    constants: dict|None = None
+    publish_templates: Optional[list[PublishTemplate]] = []
+
     apply_burn_in: bool = True
-    templates: Optional[list[PublishTemplate]] = []
+    review_template: str = JSONField(...)

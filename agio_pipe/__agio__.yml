@@ -16,11 +16,21 @@ urls:
 
 required_packages: []
 
+callbacks:
+  - plugins/callbacks.py
+
+project_entities_path: entities/*.py
+
 plugins:
   # commands
   - label: Publish Command
     implementations:
       - module: plugins/commands/publish_cmd.py
+
+  - label: Publish Info Command
+    implementations:
+      - module: plugins/commands/pipe_info_cmd.py
+
   # publish scene api
   - label: Publish Scene Standalone
     implementations:
