@@ -1,16 +1,14 @@
-from functools import cached_property
 from typing import Self, Iterator
+from agio.core import api
+from agio.core.domains import DomainBase
 
-from agio.core.domains import AEntity
 
-
-class ATask(AEntity):
-    type_name = "task"
-    entity_class = "Task"
+class AVersion(DomainBase):
+    type_name = "version"
 
     @classmethod
     def get_data(cls, object_id: str) -> dict:
-        pass
+        return api.pipe.get_version(object_id)
 
     def update(self, **kwargs) -> None:
         pass
@@ -30,14 +28,3 @@ class ATask(AEntity):
     def find(cls, **kwargs):
         pass
 
-    @property
-    def entity_id(self) -> str:
-        return '???'
-
-    @property
-    def entity_type(self) -> str:
-        return '???'
-
-    @cached_property
-    def entity(self) -> AEntity:
-        return '???'
