@@ -1,8 +1,9 @@
 from typing import Self, Iterator
 from uuid import UUID
 
-from agio.core.domains import DomainBase, AEntity
 from agio.core import api
+from agio.core.domains import DomainBase, AEntity
+from agio_pipe.entities.task import ATask
 
 
 class AProduct(DomainBase):
@@ -32,8 +33,8 @@ class AProduct(DomainBase):
                product_type: str,
                variant: str,
                ) -> Self:
-        data = api.pipe.create_product(name, entity, product_type, variant)
-        return cls(**data)
+        product_id = api.pipe.create_product(name, entity, product_type, variant)
+        return cls(product_id)
 
     def delete(self) -> None:
         raise NotImplementedError
@@ -44,7 +45,24 @@ class AProduct(DomainBase):
              product_type: str = None,
              variant: str = None,
              **kwargs):
-        pass
+        raise NotImplementedError
+
+    @property
+    def name(self) -> str:
+        return self._data["name"]
+
+    @property
+    def variant(self) -> str:
+        return self._data["variant"]
+
+    @property
+    def product_type(self) -> str:
+        return self._data["type"]
+
+    @property
+    def entity(self) -> AEntity:
+        entity_data = api.track.get_entity(self._data["entityId"])
+        return AEntity.from_data(entity_data)
 
 
 

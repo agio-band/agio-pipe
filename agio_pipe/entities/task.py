@@ -1,19 +1,13 @@
 from functools import cached_property
 from typing import Self, Iterator
 
+from agio.core import api
 from agio.core.domains import AEntity
 
 
 class ATask(AEntity):
     type_name = "task"
     entity_class = "Task"
-
-    @classmethod
-    def get_data(cls, object_id: str) -> dict:
-        pass
-
-    def update(self, **kwargs) -> None:
-        pass
 
     @classmethod
     def iter(cls, **kwargs) -> Iterator[Self]:
