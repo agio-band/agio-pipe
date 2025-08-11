@@ -16,5 +16,4 @@ def package_loaded(event, package_hub):
                 continue
             file_path_to_import_path = entity_module.relative_to(pkg.root).as_posix().rsplit('.', 1)[0].replace('/', '.')
             import_path = f"{pkg.package_name}.{file_path_to_import_path}"
-            print('IMPORT:', import_path)
             importlib.import_module(import_path)

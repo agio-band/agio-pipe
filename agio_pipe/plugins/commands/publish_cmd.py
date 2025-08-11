@@ -59,7 +59,5 @@ class PublishCommand(ACommandPlugin):
             ],
             # 'publish_session': None # TODO
         }
-        if self._report:
-            report_data.update(self._report)
         with open(output_file, 'w') as f:
             json.dump(report_data, f, indent=2)

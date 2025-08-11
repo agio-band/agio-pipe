@@ -1,13 +1,18 @@
+import os
+from pathlib import Path
 from typing import Self, Iterator
 from uuid import UUID
 
 from agio.core import api
 from agio.core.domains import DomainBase
+from agio.core.settings import get_workspace_settings
 from agio_pipe.entities import product
 
 
 class AVersion(DomainBase):
     domain_name = "version"
+
+    VERSION_PADDING = os.getenv('AGIO_VERSION_NUMBER_PADDING', 7)
 
     @property
     def version_number(self):
@@ -41,9 +46,11 @@ class AVersion(DomainBase):
         ) -> Self:
         if version_number is None:
             version_number = cls.get_next_version_number(task_id, product_id)
-        if 'files' not in fields:
+        # add padding
+        version_number = f"{version_number:0{cls.VERSION_PADDING}d}"
+        if 'published_files' not in fields:
             raise ValueError('Version files not specified')
-        version_id = api.pipe.create_version(str(version_number), product_id, task_id, fields)
+        version_id = api.pipe.create_version(version_number, product_id, task_id, fields)
         return AVersion(version_id)
 
     def delete(self) -> None:
@@ -55,8 +62,7 @@ class AVersion(DomainBase):
 
     def get_task(self):
         from agio_pipe.entities.task import ATask
-
-        task = ATask.get_data(self._data['entityId'])
+        task = ATask.get_data(self._data['entity']['id'])
         return ATask(task)
 
     def to_dict(self):
@@ -67,3 +73,29 @@ class AVersion(DomainBase):
             version=self.version_number,
             product=self.get_product().to_dict(),
         )
+
+    def __get_context(self):
+        from agio.core.settings import get_local_settings
+        project = self.get_task().project
+        local_settings = get_local_settings(project=project)
+        context = dict(
+            local_roots={k.name: k.path for k in local_settings.get('agio_pipe.local_roots')},
+            project=project,
+        )
+        return context
+
+    def iter_files_with_local_path(self):
+        from agio_pipe.utils import path_solver
+        files = self.fields['published_files']
+        if files:
+            project = self.get_task().project
+            ws_settings = get_workspace_settings(project.get_workspace())
+            templates = ws_settings.get('agio_pipe.publish_templates')
+            if templates is None:
+                raise RuntimeError('No agio publish templates configured')
+            templates = {tmpl.name: tmpl.pattern for tmpl in templates}
+            context = self.__get_context()
+            solver = path_solver.TemplateSolver(templates)
+            project_root = solver.solve('project', context)
+            for file in files:
+                yield Path(project_root) / file['relative_path']

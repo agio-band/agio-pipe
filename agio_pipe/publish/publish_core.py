@@ -99,7 +99,12 @@ class PublishCore:
                 file.size = Path(file.path).stat().st_size
                 file.hash = file_tools.get_file_hash(file.path)
                 files.append(file.model_dump(exclude=('path',)))
-            fields = {'files': files}
+            fields = {'published_files': files}
+            logger.info('Create version %s for %s %s/%s' % (
+                instance.version,
+                instance.task,
+                instance.product.name, instance.product.variant,
+                ))
             versions.append(AVersion.create(
                 product_id=instance.product.id,
                 task_id=instance.task.id,
