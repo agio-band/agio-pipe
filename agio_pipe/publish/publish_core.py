@@ -1,11 +1,21 @@
-from typing import Any
+from __future__ import annotations
 
-from agio.core.domains import AProductType
-from agio.core.domains.variant import AVariant
+import logging
+from pathlib import Path
+from typing import Any, TYPE_CHECKING
+
+from agio.core.events import emit
+from agio.core.utils import file_tools
+from agio_pipe.entities.version import AVersion
+from agio_pipe.publish.containers.export_container_base import ExportContainerBase
 from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
+from agio_pipe.entities import product as product_entity
 from agio_pipe.entities.task import ATask
+from agio_pipe.publish.published_file import PublishedFile
+
+logger = logging.getLogger(__name__)
 
 
 class PublishCore:
@@ -39,25 +49,64 @@ class PublishCore:
 
     def create_instance(self,
             task_id: str| ATask,
-            product_type_id: str| AProductType,
-            variant_id: str| AVariant,
+            product_id: str| product_entity.AProduct,
             name: str = None,
             **kwargs
         ) -> PublishInstance:
-        inst = PublishInstance(task_id, product_type_id, variant_id, name=name, **kwargs)
+        inst = PublishInstance(task_id, product_id, name=name, **kwargs)
         self.add_instances(inst)
         return inst
 
-    def start_publishing(self, scene_file: str = None, **options):
+    def create_instance_from_container(self, container: ExportContainerBase) -> PublishInstance:
+        task = container.get_task()
+        product = container.get_product()
+        inst = PublishInstance(
+            name=container.name,
+            task=task,
+            product=product,
+            sources=container.get_sources(),
+            options=container.get_options(),
+            # dependencies
+            )
+        return inst
+
+    def start_publishing(self, scene_file: str = None, **options) -> list[AVersion]:
+        emit('pipe.publish.add_report', {'publish_plugin': self.engine_plugin.name})  # TODO  user plugin name
         publish_options = self.options.copy()
         publish_options.update(options)
         if scene_file is not None:
-            scene_plugin = self.get_publish_scene_plugin(**options)
-            scene_plugin.load_scene(scene_file)
-            instances = scene_plugin.collect_instances_from_scene()
-            if instances:
-                self.add_instances(*instances)
-        self.engine_plugin.execute(**publish_options)
+
+            # TODO get current app scene plugin ##############
+            # scene_plugin = self.get_publish_scene_plugin(**options)
+            from agio_publish_simple.simple_scene.scene import SimplePublishScene
+            # TODO ###########################################
+
+            scene_plugin = SimplePublishScene(scene_file)
+            containers = scene_plugin.get_containers()
+            for cont in containers:
+                inst = self.create_instance_from_container(cont)
+                logger.info('Instance created: %s', inst)
+                self.add_instances(inst)
+        result: list[dict] = self.engine_plugin.execute(**publish_options)
+        if not result:
+            raise RuntimeError('Failed to execute publish engine. No result files')
+        versions = []
+        for item in result:
+            instance: PublishInstance = item['instance']
+            files = []
+            for file in item['published_files']:
+                file: PublishedFile
+                file.size = Path(file.path).stat().st_size
+                file.hash = file_tools.get_file_hash(file.path)
+                files.append(file.model_dump(exclude=('path',)))
+            fields = {'files': files}
+            versions.append(AVersion.create(
+                product_id=instance.product.id,
+                task_id=instance.task.id,
+                version_number=instance.version,
+                fields=fields,
+            ))
+        return versions
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
         from agio.core import plugin_hub

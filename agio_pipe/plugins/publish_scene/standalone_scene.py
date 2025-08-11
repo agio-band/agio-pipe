@@ -33,4 +33,3 @@ class PublishSceneStandalonePlugin(PublishSceneBasePlugin):
     def save_scene(self, scene_path: str = None, **options):
         with open(scene_path, 'w') as scene_file:
             json.dump(self.scene, scene_file, indent=2)
-
