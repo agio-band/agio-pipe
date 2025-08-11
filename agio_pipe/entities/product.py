@@ -3,11 +3,10 @@ from uuid import UUID
 
 from agio.core import api
 from agio.core.domains import DomainBase, AEntity
-from agio_pipe.entities.task import ATask
 
 
 class AProduct(DomainBase):
-    type_name = "product"
+    domain_name = "product"
 
     @classmethod
     def get_data(cls, object_id: str | UUID) -> dict:
@@ -28,12 +27,12 @@ class AProduct(DomainBase):
 
     @classmethod
     def create(cls,
-               entity: str | UUID | AEntity,
+               entity_id: str | UUID,
                name: str,
                product_type: str,
                variant: str,
                ) -> Self:
-        product_id = api.pipe.create_product(name, entity, product_type, variant)
+        product_id = api.pipe.create_product(name, entity_id, product_type, variant)
         return cls(product_id)
 
     def delete(self) -> None:
@@ -41,11 +40,12 @@ class AProduct(DomainBase):
 
     @classmethod
     def find(cls,
-             entity: str | UUID | AEntity,
+             entity_id: str | UUID,
              product_type: str = None,
              variant: str = None,
              **kwargs):
-        raise NotImplementedError
+        data = api.pipe.find_product(entity_id=entity_id, product_type=product_type, variant=variant)
+        return cls(data)
 
     @property
     def name(self) -> str:
@@ -56,7 +56,7 @@ class AProduct(DomainBase):
         return self._data["variant"]
 
     @property
-    def product_type(self) -> str:
+    def type(self) -> str:
         return self._data["type"]
 
     @property

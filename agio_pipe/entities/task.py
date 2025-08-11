@@ -1,37 +1,25 @@
 from functools import cached_property
-from typing import Self, Iterator
+from typing import Iterator, Self
+from uuid import UUID
 
-from agio.core import api
-from agio.core.domains import AEntity
+from agio.core.domains import entity, project
 
 
-class ATask(AEntity):
-    type_name = "task"
+class ATask(entity.AEntity):
     entity_class = "Task"
-
-    @classmethod
-    def iter(cls, **kwargs) -> Iterator[Self]:
-        pass
-
-    @classmethod
-    def create(cls, **kwargs) -> Self:
-        pass
-
-    def delete(self) -> None:
-        pass
-
-    @classmethod
-    def find(cls, **kwargs):
-        pass
 
     @property
     def entity_id(self) -> str:
-        return '???'
+        return self._data["parent"]["id"]
 
     @property
     def entity_type(self) -> str:
-        return '???'
+        return self._data['parent']['class']['name']
 
     @cached_property
-    def entity(self) -> AEntity:
-        return '???'
+    def entity(self) -> entity.AEntity:
+        return entity.AEntity.from_id(self._data['parent']['id'])
+
+    @cached_property
+    def project(self):
+        return project.AProject(self._data['projectId'])

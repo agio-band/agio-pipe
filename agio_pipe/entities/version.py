@@ -3,21 +3,18 @@ from uuid import UUID
 
 from agio.core import api
 from agio.core.domains import DomainBase
-from agio_pipe.entities.task import ATask
+from agio_pipe.entities import product
 
 
 class AVersion(DomainBase):
-    type_name = "version"
+    domain_name = "version"
 
     @property
     def version_number(self):
         return int(self._data['name'])
 
-    @property
     def get_product(self):
-        from agio_pipe.entities.product import AProduct
-
-        return AProduct(self.data['productId'])
+        return product.AProduct(self.data['publish']['id'])
 
     @classmethod
     def get_data(cls, object_id: str) -> dict:
@@ -57,6 +54,16 @@ class AVersion(DomainBase):
         raise NotImplementedError()
 
     def get_task(self):
-        task = ATask.get_data(self._data['entityId'])
+        from agio_pipe.entities.task import ATask
 
+        task = ATask.get_data(self._data['entityId'])
         return ATask(task)
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            entity=self._data['entity'],
+            fields=self._data['fields'],
+            version=self.version_number,
+            product=self.get_product().to_dict(),
+        )
