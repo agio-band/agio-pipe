@@ -18,9 +18,9 @@ class PublishCommand(ACommandPlugin):
                        nargs=1,
                        required=False),
         click.option("-t", "--task_id", help='Task ID'),
-        click.option("-u", "--ui", is_flag=True, help='Open Dialog'),
-        click.option("-i", "--instances", multiple=True, help='Open Dialog'),
-        click.option("-o", "--output_file", help='File to write reports'),
+        click.option("-u", "--ui", is_flag=True, help='Open Publish Tool Dialog'),
+        click.option("-i", "--instances", multiple=True, help='Instances to publish by name'),
+        click.option("-o", "--output_file", help='JSON file to write report'),
     ]
 
     def execute(self, scene_file: str, task_id: str,  ui: bool, instances: tuple, output_file: str):
@@ -34,13 +34,15 @@ class PublishCommand(ACommandPlugin):
                 click.secho('Created versions:', fg='green')
                 for vers in versions:
                     click.secho(vers, fg='green')
+                    for p in vers.iter_files_with_local_path():
+                        click.secho(f'  {p}', fg='green')
             else:
                 click.secho('No versions found', fg='red')
             if output_file:
                 self.create_report_file(output_file, scene_file, versions)
 
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
-        click.secho('Open Dialog', fg='yellow')
+        click.secho('Open Publisher Dialog...', fg='yellow')
         from agio_publish_simple.ui import show_dialog
         show_dialog(scene_file, instances, task_id)
 
