@@ -2,7 +2,6 @@ import json
 
 import click
 from agio.core.plugins.base_command import ACommandPlugin
-from agio_pipe.entities.version import AVersion
 from agio_pipe.publish.publish_core import PublishCore
 import logging
 
@@ -29,17 +28,20 @@ class PublishCommand(ACommandPlugin):
         else:
             if not scene_file:
                 raise click.BadParameter('The scene_file not provided')
-            versions = self.start_publish(scene_file, instances)
-            if versions:
-                click.secho('Created versions:', fg='green')
-                for vers in versions:
-                    click.secho(vers, fg='green')
-                    for p in vers.iter_files_with_local_path():
-                        click.secho(f'  {p}', fg='green')
-            else:
-                click.secho('No versions found', fg='red')
+            results = self.start_publish(scene_file, instances)
+            from pprint import pprint
+            if results:
+                click.secho('Completed instances:', fg='green')
+                for inst in results:
+                    pprint(inst.results)
+                # for vers in results:
+                #     click.secho(vers['id'], fg='green')
+                #     # for p in vers.iter_files_with_local_path():
+                #     #     click.secho(f'  {p}', fg='green')
+            # else:
+            #     click.secho('No versions found', fg='red')
             if output_file:
-                self.create_report_file(output_file, scene_file, versions)
+                self.create_report_file(output_file, scene_file, [inst.results for inst in results])
 
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
         click.secho('Open Publisher Dialog...', fg='yellow')
@@ -52,13 +54,11 @@ class PublishCommand(ACommandPlugin):
         publish_core = PublishCore()
         return publish_core.start_publishing(scene_file=scene_file, selected_instances=instances)
 
-    def create_report_file(self, output_file: str, scene_file: str, versions: list[AVersion]):
+    def create_report_file(self, output_file: str, scene_file: str, versions: list):
 
         report_data = {
             'scene_file': scene_file,
-            'new_versions': [
-                v.to_dict() for v in versions
-            ],
+            'new_versions': versions,
             # 'publish_session': None # TODO
         }
         with open(output_file, 'w') as f:

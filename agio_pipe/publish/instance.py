@@ -4,6 +4,7 @@ from dataclasses import dataclass, field, InitVar
 from typing import Any, TYPE_CHECKING
 
 from agio_pipe.entities import version
+from agio_pipe.entities.version import AVersion
 
 if TYPE_CHECKING:
     from agio_pipe.entities.product import AProduct
@@ -31,6 +32,7 @@ class PublishInstance:
         self.dependencies = dependencies or []
         self.metadata = metadata or {}
         self._version = None
+        self.results = {}
 
     @property
     def version(self):
@@ -39,7 +41,7 @@ class PublishInstance:
         return self._version
 
     def to_dict(self):
-        return dict(
+        data = dict(
             id=self.id,
             name=self.name,
             task_id=self.task.id,
@@ -47,6 +49,14 @@ class PublishInstance:
             sources=self.sources,
             options=self.options,
             metadata=self.metadata,
+        )
+        if self.results:
+            data['results'] = self.results
+
+    def set_results(self, new_version: AVersion, published_files: list):
+        self.results = dict(
+            new_version=new_version,
+            published_files=published_files
         )
 
     def __eq__(self, other):

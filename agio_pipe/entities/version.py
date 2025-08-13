@@ -8,6 +8,8 @@ from agio.core.domains import DomainBase
 from agio.core.settings import get_workspace_settings
 from agio_pipe.entities import product
 
+from agio_pipe.schemas.version import AVersionCreateSchema
+
 
 class AVersion(DomainBase):
     domain_name = "version"
@@ -42,15 +44,23 @@ class AVersion(DomainBase):
                product_id: str|UUID,
                task_id: str|UUID,
                fields: dict,
-               version_number: int = None,
+               version: int = None,
         ) -> Self:
-        if version_number is None:
-            version_number = cls.get_next_version_number(task_id, product_id)
+        if version is None:
+            version = cls.get_next_version_number(task_id, product_id)
         # add padding
-        version_number = f"{version_number:0{cls.VERSION_PADDING}d}"
+        version = f"{version:0{cls.VERSION_PADDING}d}"
         if 'published_files' not in fields:
             raise ValueError('Version files not specified')
-        version_id = api.pipe.create_version(version_number, product_id, task_id, fields)
+        schema = AVersionCreateSchema(
+            **dict(
+                product_id=product_id,
+                task_id=task_id,
+                version=version,
+                fields=fields
+            ),
+        )
+        version_id = api.pipe.create_version(**schema.model_dump())
         return AVersion(version_id)
 
     def delete(self) -> None:

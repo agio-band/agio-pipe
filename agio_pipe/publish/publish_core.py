@@ -13,7 +13,7 @@ from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
 from agio_pipe.entities import product as product_entity
 from agio_pipe.entities.task import ATask
-from agio_pipe.publish.published_file import PublishedFile
+from agio_pipe.schemas.version import PublishedFileFull
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class PublishCore:
             )
         return inst
 
-    def start_publishing(self, scene_file: str = None, **options) -> list[AVersion]:
+    def start_publishing(self, scene_file: str = None, **options) -> list[PublishInstance]:
         emit('pipe.publish.add_report', {'publish_plugin': self.engine_plugin.name})  # TODO  user plugin name
         publish_options = self.options.copy()
         publish_options.update(options)
@@ -90,28 +90,30 @@ class PublishCore:
         result: list[dict] = self.engine_plugin.execute(**publish_options)
         if not result:
             raise RuntimeError('Failed to execute publish engine. No result files')
-        versions = []
+        done_instances = []
         for item in result:
             instance: PublishInstance = item['instance']
             files = []
             for file in item['published_files']:
-                file: PublishedFile
+                file: PublishedFileFull
                 file.size = Path(file.path).stat().st_size
-                file.hash = file_tools.get_file_hash(file.path)
-                files.append(file.model_dump(exclude=('path',)))
+                file.hash = file_utils.get_file_hash(file.path)
+                files.append(file.model_dump())
             fields = {'published_files': files}
             logger.info('Create version %s for %s %s/%s' % (
                 instance.version,
                 instance.task,
                 instance.product.name, instance.product.variant,
                 ))
-            versions.append(AVersion.create(
+            version = AVersion.create(
                 product_id=instance.product.id,
                 task_id=instance.task.id,
-                version_number=instance.version,
+                version=instance.version,
                 fields=fields,
-            ))
-        return versions
+            )
+            instance.set_results(version.data, files)
+            done_instances.append(instance)
+        return done_instances
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
         from agio.core import plugin_hub
