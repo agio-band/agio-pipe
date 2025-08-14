@@ -5,7 +5,7 @@ from uuid import UUID
 
 from agio.core import api
 from agio.core.domains import DomainBase
-from agio.core.settings import get_workspace_settings
+from agio.core import settings
 from agio_pipe.entities import product
 
 from agio_pipe.schemas.version import AVersionCreateSchema
@@ -43,15 +43,13 @@ class AVersion(DomainBase):
     def create(cls,
                product_id: str|UUID,
                task_id: str|UUID,
-               fields: dict,
+               fields: dict = None,
                version: int = None,
         ) -> Self:
         if version is None:
             version = cls.get_next_version_number(task_id, product_id)
         # add padding
         version = f"{version:0{cls.VERSION_PADDING}d}"
-        if 'published_files' not in fields:
-            raise ValueError('Version files not specified')
         schema = AVersionCreateSchema(
             **dict(
                 product_id=product_id,
@@ -99,7 +97,7 @@ class AVersion(DomainBase):
         files = self.fields['published_files']
         if files:
             project = self.get_task().project
-            ws_settings = get_workspace_settings(project.get_workspace())
+            ws_settings = settings.get_workspace_settings(project.get_workspace())
             templates = ws_settings.get('agio_pipe.publish_templates')
             if templates is None:
                 raise RuntimeError('No agio publish templates configured')

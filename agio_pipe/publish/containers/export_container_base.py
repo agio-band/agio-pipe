@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from agio_pipe.entities import product as product_
-from agio_pipe.entities.task import ATask
+if TYPE_CHECKING:
+    from agio_pipe.entities.task import ATask
 
 
 class ExportContainerBase(ABC):

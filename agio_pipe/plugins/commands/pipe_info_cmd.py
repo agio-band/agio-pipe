@@ -2,7 +2,6 @@ import json
 
 import click
 from agio.core.plugins.base_command import ACommandPlugin
-from agio_pipe.publish.publish_core import PublishCore
 
 
 class PublishInfoCommand(ACommandPlugin):

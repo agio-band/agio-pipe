@@ -1,12 +1,13 @@
 import json
-
-import click
-from agio.core.plugins.base_command import ACommandPlugin
-from agio_pipe.publish.publish_core import PublishCore
 import logging
 
+import click
+
+from agio.core.plugins.base_command import ACommandPlugin
+from agio_pipe.publish import publish_core
 
 logger = logging.getLogger(__name__)
+
 
 class PublishCommand(ACommandPlugin):
     name = 'publish_cmd'
@@ -29,17 +30,10 @@ class PublishCommand(ACommandPlugin):
             if not scene_file:
                 raise click.BadParameter('The scene_file not provided')
             results = self.start_publish(scene_file, instances)
-            from pprint import pprint
             if results:
-                click.secho('Completed instances:', fg='green')
-                for inst in results:
-                    pprint(inst.results)
-                # for vers in results:
-                #     click.secho(vers['id'], fg='green')
-                #     # for p in vers.iter_files_with_local_path():
-                #     #     click.secho(f'  {p}', fg='green')
-            # else:
-            #     click.secho('No versions found', fg='red')
+                click.secho(f'Completed instances: {len(results)}', fg='green')
+            else:
+                click.secho('No versions found', fg='red')
             if output_file:
                 self.create_report_file(output_file, scene_file, [inst.results for inst in results])
 
@@ -51,8 +45,8 @@ class PublishCommand(ACommandPlugin):
     def start_publish(self, scene_file: str, instances: tuple):
         click.secho(f'Start Publish...', fg='yellow')
         # TODO pass options
-        publish_core = PublishCore()
-        return publish_core.start_publishing(scene_file=scene_file, selected_instances=instances)
+        core = publish_core.PublishCore()
+        return core.start_publishing(scene_file=scene_file, selected_instances=instances)
 
     def create_report_file(self, output_file: str, scene_file: str, versions: list):
 

@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
-from agio.core.events import emit
-from agio.core.utils import file_utils
+from agio.core.utils import plugin_hub
+from agio_pipe.entities import product as product_entity
+from agio_pipe.entities import task as task_domain
+from agio_pipe.entities.published_file import APublishedFile
 from agio_pipe.entities.version import AVersion
 from agio_pipe.publish.containers.export_container_base import ExportContainerBase
 from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
-from agio_pipe.entities import product as product_entity
-from agio_pipe.entities.task import ATask
 from agio_pipe.schemas.version import PublishedFileFull
 
 logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class PublishCore:
         return list(self.engine_plugin.instances.values())
 
     def create_instance(self,
-            task_id: str| ATask,
+            task_id: str| 'task_domain.ATask',
             product_id: str| product_entity.AProduct,
             name: str = None,
             **kwargs
@@ -71,7 +70,6 @@ class PublishCore:
         return inst
 
     def start_publishing(self, scene_file: str = None, **options) -> list[PublishInstance]:
-        emit('pipe.publish.add_report', {'publish_plugin': self.engine_plugin.name})  # TODO  user plugin name
         publish_options = self.options.copy()
         publish_options.update(options)
         if scene_file is not None:
@@ -93,49 +91,50 @@ class PublishCore:
         done_instances = []
         for item in result:
             instance: PublishInstance = item['instance']
-            files = []
-            for file in item['published_files']:
-                file: PublishedFileFull
-                file.size = Path(file.path).stat().st_size
-                file.hash = file_utils.get_file_hash(file.path)
-                files.append(file.model_dump())
-            fields = {'published_files': files}
-            logger.info('Create version %s for %s %s/%s' % (
-                instance.version,
-                instance.task,
-                instance.product.name, instance.product.variant,
-                ))
             version = AVersion.create(
                 product_id=instance.product.id,
                 task_id=instance.task.id,
                 version=instance.version,
-                fields=fields,
             )
-            instance.set_results(version.data, files)
+            files = []
+            for file in item['published_files']:
+                file: PublishedFileFull
+                published_file = APublishedFile.create(
+                    version_id=version.id,
+                    path=file.relative_path
+                )
+                files.append(published_file.to_dict())
+
+            logger.info('Create version %s for %s %s/%s' % (
+                instance.version,
+                instance.task,
+                instance.product.name, instance.product.variant,
+            ))
+
+            instance.set_results(version.to_dict(), files)
             done_instances.append(instance)
         return done_instances
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
-        from agio.core import plugin_hub
-
+        plg_hub = plugin_hub.APluginHub.instance()
         # TODO: engine name order resolve: options, settings, default
         engine_name = self._options.get('engine_name', 'simple_publish')
-        plugin = plugin_hub.get_plugin_by_name('publish_engine', engine_name)
+        plugin = plg_hub.get_plugin_by_name('publish_engine', engine_name)
         if not plugin:
             raise ValueError(f"Plugin '{engine_name}' not found")
         return plugin
 
     def get_publish_scene_plugin(self, **options) -> PublishSceneBasePlugin:
-        from agio.core import plugin_hub
+        plg_hub = plugin_hub.APluginHub.instance()
         scene_plugin_name = options.get('scene_plugin_name')
         app_name = 'standalone' # TODO: get from current context
         if scene_plugin_name:
-            scene_plugin = plugin_hub.get_plugin_by_name('publish_scene', scene_plugin_name)
+            scene_plugin = plg_hub.get_plugin_by_name('publish_scene', scene_plugin_name)
             if not scene_plugin:
                 raise ValueError(f"Plugin '{scene_plugin_name}' not found")
             return scene_plugin
         elif app_name:
-            for plugin in plugin_hub.iter_plugins('publish_scene'):
+            for plugin in plg_hub.iter_plugins('publish_scene'):
                 if plugin.app_name == app_name:
                     return plugin
             else:
