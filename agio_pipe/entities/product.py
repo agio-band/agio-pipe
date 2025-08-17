@@ -45,6 +45,8 @@ class AProduct(DomainBase):
              variant: str = None,
              **kwargs):
         data = api.pipe.find_product(entity_id=entity_id, product_type=product_type, variant=variant)
+        if not data:
+            return
         return cls(data)
 
     @property
