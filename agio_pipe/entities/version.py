@@ -36,8 +36,8 @@ class AVersion(DomainBase):
             yield AVersion(data)
 
     @classmethod
-    def get_next_version_number(cls, task_id: str, product_id: str) -> int:
-        return api.pipe.get_next_version_number(task_id, product_id)
+    def get_next_version_number(cls, product_id: str) -> int:
+        return api.pipe.get_next_version_number(product_id)
 
     @classmethod
     def create(cls,
@@ -47,7 +47,7 @@ class AVersion(DomainBase):
                version: int = None,
         ) -> Self:
         if version is None:
-            version = cls.get_next_version_number(task_id, product_id)
+            version = cls.get_next_version_number(product_id)
         # add padding
         version = f"{version:0{cls.VERSION_PADDING}d}"
         schema = AVersionCreateSchema(

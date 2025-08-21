@@ -88,7 +88,11 @@ class TokenBase:
         try:
             value = extract_variable.get_nested_value(names, context)
         except (KeyError, AttributeError, IndexError) as e:
-            raise VariableNotFoundError from e
+            if isinstance(names, list):
+                msg_name = '.'.join(names)
+            else:
+                msg_name = names
+            raise VariableNotFoundError(f'Variable not found: {msg_name}') from e
         return value
 
     def apply_formatting(self, value, formats: list|str, context: dict) -> str:

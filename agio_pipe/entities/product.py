@@ -49,6 +49,17 @@ class AProduct(DomainBase):
             return
         return cls(data)
 
+    @classmethod
+    def get_or_create(cls,
+              entity_id: str | UUID,
+              name: str,
+              product_type: str,
+              variant: str,):
+        prod = cls.find(entity_id=entity_id, product_type=product_type, variant=variant)
+        if not prod:
+            prod = cls.create(entity_id=entity_id, name=name, product_type=product_type, variant=variant)
+        return prod
+
     @property
     def name(self) -> str:
         return self._data["name"]

@@ -37,7 +37,7 @@ class PublishInstance:
     @property
     def version(self):
         if self._version is None:
-            self._version = version.AVersion.get_next_version_number(self.task.id, self.product.id)
+            self._version = version.AVersion.get_next_version_number(self.product.id)
         return self._version
 
     def to_dict(self):
