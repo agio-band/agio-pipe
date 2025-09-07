@@ -10,4 +10,4 @@ class LocalRootsSettings(BaseModel):
 
 
 class PipeLocalSettings(APackageSettings):
-    local_roots: list[LocalRootsSettings]
+    local_roots: list[LocalRootsSettings] = []
