@@ -10,5 +10,4 @@ class LocalRootsSettings(BaseModel):
 
 
 class PipeLocalSettings(APackageSettings):
-    publish_temp_dir: Optional[str] = None
     local_roots: list[LocalRootsSettings]

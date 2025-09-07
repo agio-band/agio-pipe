@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 
 import click
 
@@ -40,7 +41,11 @@ class PublishCommand(ACommandPlugin):
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
         click.secho('Open Publisher Dialog...', fg='yellow')
         from agio_publish_simple.ui import show_dialog
-        show_dialog(scene_file, instances, task_id)
+        from agio_desk.tools import qt
+        try:
+            show_dialog(scene_file, instances, task_id)
+        except Exception as e:
+            qt.message_dialog('Error', str(e), level='error')
 
     def start_publish(self, scene_file: str, instances: tuple):
         click.secho(f'Start Publish...', fg='yellow')
