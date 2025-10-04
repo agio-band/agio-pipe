@@ -14,11 +14,8 @@ class PublishCommand(ACommandPlugin):
     name = 'publish_cmd'
     command_name = 'pub'
     arguments = [
-        click.option(
-            "-s", "--scene-file",
-            type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
-            help="Path to the scene file",
-            required=False,
+        click.argument(
+            'scene-file', required=False, type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True)
         ),
         click.option("-t", "--task-id", help='Task ID for ui context', required=False),
         click.option("-u", "--ui", is_flag=True, help='Open Publish Tool Dialog'),
