@@ -14,12 +14,14 @@ urls:
   documentation: ""
   bug_tracker: "https://github.com/agio-band/agio-pipe/issues"
 
-required_packages: []
-
 callbacks:
   - plugins/callbacks.py
 
 project_entities_path: entities/*.py
+
+agio_package_dependencies: [
+  "agio_core==0.0.1",
+]
 
 plugins:
   # commands
