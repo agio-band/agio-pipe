@@ -18,12 +18,15 @@ class ExportContainerBase(ABC):
                name: str,
                task: 'ATask',
                product: product_.AProduct,
-               source_objects: list[Any] = None
+               source_objects: list[Any] = None,
+               id: str = None
                ) -> Any:
         container = cls.create_scene_container(name)
         instance = cls(container)
         instance.set_task(task)
         instance.set_product(product)
+        if id:
+            instance.set_id(id)
         if source_objects:
             for src in source_objects:
                 instance.add_source(src)
@@ -39,15 +42,17 @@ class ExportContainerBase(ABC):
     def __repr__(self):
         return f'<Container [{self}]>'
 
-    # @property
-    # @abstractmethod
-    # def id(self):
-    #     """Unique container ID"""
-
     @property
     @abstractmethod
     def name(self):
         """Container name"""
+
+    @property
+    def id(self):
+        return
+
+    def set_id(self, value):
+        """Set container id"""
 
     def validate(self):
         """
@@ -64,7 +69,7 @@ class ExportContainerBase(ABC):
 
     @classmethod
     @abstractmethod
-    def create_scene_container(cls, name: str):
+    def create_scene_container(cls, name: str, id: str = None) -> Any:
         """
         Implementation for current software
         """

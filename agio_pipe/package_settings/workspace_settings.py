@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class PublishTemplate(BaseModel):
     name: str
-    root_name: str = None
+    # root_name: str = None
     pattern: str = Field(..., widget='PathTemplate')
 
 

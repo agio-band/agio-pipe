@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self, Iterator
 from uuid import UUID
 
@@ -33,6 +34,7 @@ class APublishedFile(DomainBase):
 
     @classmethod
     def create(cls, version_id: str|UUID, path: str, name: str = None) -> Self:
+        name = name or Path(path).name
         data = api.pipe.create_publish_file(version_id=version_id, path=path, name=name)
         return APublishedFile(data)
 

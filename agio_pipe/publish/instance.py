@@ -52,6 +52,7 @@ class PublishInstance:
         )
         if self.results:
             data['results'] = self.results
+        return data
 
     def set_results(self, new_version: AVersion, published_files: list):
         self.results = dict(

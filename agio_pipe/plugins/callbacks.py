@@ -3,10 +3,11 @@ from agio.core.events import callback
 from agio.core.pkg import APackageManager
 import importlib
 
+logger = logging.getLogger(__name__)
 
 @callback('core.app.all_packages_loaded')
 def package_loaded(event, package_hub):
-    logging.debug("Load entity classes")
+    logger.debug("Load entity classes")
     for pkg in package_hub.iter_packages():
         pkg: APackageManager
         entities_path = pkg.get_meta_data_field('project_entities_path', 'entities/*.py')

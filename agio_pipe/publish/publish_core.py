@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any
 
 from agio.core.utils import plugin_hub
@@ -13,6 +14,7 @@ from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
 from agio_pipe.schemas.version import PublishedFileFull
+from agio_publish_simple.ui.main_window import PublishDialog
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ class PublishCore:
         task = container.get_task()
         product = container.get_product()
         inst = PublishInstance(
+            id=container.id,
             name=container.name,
             task=task,
             product=product,
@@ -69,7 +72,11 @@ class PublishCore:
             )
         return inst
 
-    def start_publishing(self, scene_file: str = None, **options) -> list[PublishInstance]:
+    def open_dialog(self, **kwargs):
+        ...
+
+    def start_publishing(self, scene_file: str|dict = None,
+                         return_result_only: bool = False, **options) -> list[PublishInstance] | list[dict]:
         publish_options = self.options.copy()
         publish_options.update(options)
         if scene_file is not None:
@@ -88,6 +95,8 @@ class PublishCore:
         result: list[dict] = self.engine_plugin.execute(**publish_options)
         if not result:
             raise RuntimeError('Failed to execute publish engine. No result files')
+        if return_result_only:
+            return result
         done_instances = []
         for item in result:
             instance: PublishInstance = item['instance']
@@ -97,13 +106,20 @@ class PublishCore:
                 version=instance.version,
             )
             files = []
+            # try:
             for file in item['published_files']:
                 file: PublishedFileFull
                 published_file = APublishedFile.create(
                     version_id=version.id,
-                    path=file.relative_path
+                    path=file.relative_path,
                 )
-                files.append(published_file.to_dict())
+                files.append({
+                    **published_file.to_dict(),
+                    'orig_path': file.orig_path # add original path
+                })
+            # except Exception as e:
+            #     traceback.print_exc()
+            #     version.delete()
 
             logger.info('Create version %s for %s %s/%s' % (
                 instance.version,
