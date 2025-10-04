@@ -4,6 +4,7 @@ import logging
 import traceback
 from typing import Any
 
+from agio.core.events import emit
 from agio.core.utils import plugin_hub
 from agio_pipe.entities import product as product_entity
 from agio_pipe.entities import task as task_domain
@@ -79,6 +80,7 @@ class PublishCore:
                          return_result_only: bool = False, **options) -> list[PublishInstance] | list[dict]:
         publish_options = self.options.copy()
         publish_options.update(options)
+        emit('pipe.publish.before_start', publish_options)
         if scene_file is not None:
 
             # TODO get current app scene plugin ##############
