@@ -5,3 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"agio_pipe" = [
+    "__agio__.yml",
+]
