@@ -44,7 +44,7 @@ class PublishCommand(ACommandPlugin):
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
         click.secho('Open Publisher Dialog...', fg='yellow')
         from agio_publish_simple.ui import show_dialog
-        from agio_desk.tools import qt
+        from agio.tools import qt
         try:
             show_dialog(scene_file, instances, task_id)
         except Exception as e:
