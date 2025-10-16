@@ -1,8 +1,9 @@
-from typing import Self, Iterator
+from typing import Iterator
 from uuid import UUID
 
 from agio.core import api
 from agio.core.domains import DomainBase, AEntity
+from . import product_type
 
 
 class AProduct(DomainBase):
@@ -16,14 +17,14 @@ class AProduct(DomainBase):
         raise NotImplementedError
 
     @classmethod
-    def iter(cls, entity: str | UUID | AEntity, product_type: str = None, **kwargs) -> Iterator[Self]:
+    def iter(cls, entity: str | UUID | AEntity, product_type: str = None, **kwargs) -> Iterator['AProduct']:
         if isinstance(entity, AEntity):
             entity = str(entity.id)
         for prod in api.pipe.iter_products(
             entity_id=entity,
                 product_type=product_type
             ):
-            yield prod
+            yield cls(prod)
 
     @classmethod
     def create(cls,
@@ -31,7 +32,7 @@ class AProduct(DomainBase):
                name: str,
                product_type: str,
                variant: str,
-               ) -> Self:
+               ) -> 'AProduct':
         product_id = api.pipe.create_product(name, entity_id, product_type, variant)
         return cls(product_id)
 
@@ -69,8 +70,8 @@ class AProduct(DomainBase):
         return self._data["variant"]
 
     @property
-    def type(self) -> str:
-        return self._data["type"]
+    def type(self) -> product_type.AProductType:
+        return product_type.AProductType(self._data["type"])
 
     @property
     def entity(self) -> AEntity:

@@ -138,7 +138,8 @@ class ExportContainerBase(ABC):
             product_id=product.id,
             options=self.get_options(),
             # extra fields
-            product_type=product.type,
+            product_type=product.type.name,
+            product_type_id=product.type.id,
             product_name=product.name,
             variant=product.variant,
             task_name=task.name
