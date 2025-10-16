@@ -49,7 +49,7 @@ class PublishCommand(ACommandPlugin):
             show_dialog(scene_file, instances, task_id)
         except Exception as e:
             traceback.print_exc()
-            qt.message_dialog('Error', f'{type(e).__name__}: {e}', level='error')
+            qt.show_message_dialog('Error', f'{type(e).__name__}: {e}', level='error')
 
     def start_publish(self, scene_file: str, instances: tuple, **kwargs):
         click.secho(f'Start Publish...', fg='yellow')
