@@ -64,7 +64,7 @@ class PublishCommand(ACommandPlugin):
             # 'publish_session': None # TODO
         }
         if hasattr(output_file, 'write') and callable(getattr(output_file, 'write')):
-            json.dump(report_data, output_file, indent=2)
+            json.dump(report_data, output_file, indent=2, ensure_ascii=False)
         else:
             with open(output_file, 'w') as f:
-                json.dump(report_data, f, indent=2)
+                json.dump(report_data, f, indent=2, ensure_ascii=False)
