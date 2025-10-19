@@ -10,7 +10,7 @@ class PublishInfoCommand(ACommandPlugin):
     arguments = []
 
     def execute(self):
-        from agio.core.domains import entity
+        from agio.core.entities import entity
 
         print('Entity classes:')
         for cls in sorted(entity.AEntity.__subclasses__(), key=lambda x: x.entity_class):

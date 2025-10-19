@@ -1,8 +1,9 @@
+from __future__ import annotations
 from typing import Iterator
 from uuid import UUID
 
 from agio.core import api
-from agio.core.domains import DomainBase, AEntity
+from agio.core.entities import DomainBase, AEntity
 from . import product_type
 
 
@@ -17,12 +18,17 @@ class AProduct(DomainBase):
         raise NotImplementedError
 
     @classmethod
-    def iter(cls, entity: str | UUID | AEntity, product_type: str = None, **kwargs) -> Iterator['AProduct']:
+    def iter(cls,
+             entity: str | UUID | AEntity,
+             product_type_id: str = None,
+             product_type_name: str = None,
+             **kwargs) -> Iterator['AProduct']:
         if isinstance(entity, AEntity):
             entity = str(entity.id)
         for prod in api.pipe.iter_products(
-            entity_id=entity,
-                product_type=product_type
+                entity_id=entity,
+                product_type_id=product_type_id,
+                product_type_name=product_type_name
             ):
             yield cls(prod)
 
@@ -30,10 +36,10 @@ class AProduct(DomainBase):
     def create(cls,
                entity_id: str | UUID,
                name: str,
-               product_type: str,
+               product_type_id: str,
                variant: str,
                ) -> 'AProduct':
-        product_id = api.pipe.create_product(name, entity_id, product_type, variant)
+        product_id = api.pipe.create_product(name, entity_id, variant, product_type_id=product_type_id)
         return cls(product_id)
 
     def delete(self) -> None:
@@ -42,24 +48,13 @@ class AProduct(DomainBase):
     @classmethod
     def find(cls,
              entity_id: str | UUID,
-             product_type: str = None,
+             name: str,
              variant: str = None,
              **kwargs):
-        data = api.pipe.find_product(entity_id=entity_id, product_type=product_type, variant=variant)
+        data = api.pipe.find_product(entity_id=entity_id, name=name, variant=variant)
         if not data:
             return
         return cls(data)
-
-    @classmethod
-    def get_or_create(cls,
-              entity_id: str | UUID,
-              name: str,
-              product_type: str,
-              variant: str,):
-        prod = cls.find(entity_id=entity_id, product_type=product_type, variant=variant)
-        if not prod:
-            prod = cls.create(entity_id=entity_id, name=name, product_type=product_type, variant=variant)
-        return prod
 
     @property
     def name(self) -> str:

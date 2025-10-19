@@ -1,4 +1,4 @@
-from agio.core.domains import AEntity
+from agio.core.entities import AEntity
 
 
 class ASequence(AEntity):

@@ -2,7 +2,7 @@ from functools import cached_property
 from typing import Iterator, Self
 from uuid import UUID
 
-from agio.core.domains import entity, project
+from agio.core.entities import entity, project
 
 
 class ATask(entity.AEntity):

@@ -2,7 +2,7 @@ from typing import Iterator
 from uuid import UUID
 
 from agio.core import api
-from agio.core.domains import DomainBase, AEntity
+from agio.core.entities import DomainBase
 
 
 class AProductType(DomainBase):
@@ -12,12 +12,15 @@ class AProductType(DomainBase):
     def get_data(cls, object_id: str | UUID) -> dict:
         return api.pipe.get_product_type(object_id)
 
-    def update(self, object_id: str, config: dict = None, data_type: str = None) -> None:
+    def update(self, config: dict = None, data_type: str = None) -> None:
         return api.pipe.update_product_type(
-            object_id,
+            self.id,
             config=config,
             data_type=data_type,
         )
+
+    def set_config(self, config: dict) -> None:
+        return self.update(config=config)
 
     @classmethod
     def iter(cls, **kwargs) -> Iterator['AProductType']:

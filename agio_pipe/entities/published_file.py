@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Self, Iterator
 from uuid import UUID
 
-from agio.core.domains import DomainBase
+from agio.core.entities import DomainBase
 from agio.core import api
 from agio_pipe.entities.version import AVersion
 
