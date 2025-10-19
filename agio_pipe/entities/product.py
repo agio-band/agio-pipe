@@ -38,8 +38,9 @@ class AProduct(DomainBase):
                name: str,
                product_type_id: str,
                variant: str,
+               fields: dict = None,
                ) -> 'AProduct':
-        product_id = api.pipe.create_product(name, entity_id, variant, product_type_id=product_type_id)
+        product_id = api.pipe.create_product(name, entity_id, variant, product_type_id=product_type_id, fields=fields)
         return cls(product_id)
 
     def delete(self) -> None:
