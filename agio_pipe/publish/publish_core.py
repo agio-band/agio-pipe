@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import traceback
 from typing import Any
 
 from agio.core.events import emit
@@ -11,11 +10,11 @@ from agio_pipe.entities import task as task_domain
 from agio_pipe.entities.published_file import APublishedFile
 from agio_pipe.entities.version import AVersion
 from agio_pipe.publish.containers.export_container_base import ExportContainerBase
+from agio_pipe.exceptions import PublishError
 from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
 from agio_pipe.schemas.version import PublishedFileFull
-from agio_publish_simple.ui.main_window import PublishDialog
 
 logger = logging.getLogger(__name__)
 
@@ -73,14 +72,11 @@ class PublishCore:
             )
         return inst
 
-    def open_dialog(self, **kwargs):
-        ...
-
     def start_publishing(self, scene_file: str|dict = None,
                          return_result_only: bool = False, **options) -> list[PublishInstance] | list[dict]:
         publish_options = self.options.copy()
         publish_options.update(options)
-        emit('pipe.publish.before_start', publish_options)
+        emit('pipe.publish.before_start', {'publish_options': publish_options})
         if scene_file is not None:
 
             # TODO get current app scene plugin ##############
@@ -94,6 +90,21 @@ class PublishCore:
                 inst = self.create_instance_from_container(cont)
                 logger.info('Instance created: %s', inst)
                 self.add_instances(inst)
+        instances = self.get_instances()
+        if not instances:
+            raise PublishError('No instances to process')
+        project_ids = set([inst.task.project_id for inst in instances])
+        if len(project_ids) != 1:
+            raise PublishError(detail=f'Multiple projects in single publish session is not supported ({len(project_ids)})')
+        project = instances[0].project
+        project_settings = project.get_workspace().get_settings()
+        # sync versions
+        if project_settings.get('agio_pipe.sync_instance_version_numbers', default=True): # TODO get from to different package. change parameter name
+            max_version = max([inst.version for inst in self.get_instances()])
+            logger.info('Max version: %s', max_version)
+            for inst in self.get_instances():
+                inst.set_version(max_version)
+        emit('pipe.publish.before_publish_engine_execute', {'publish_options': publish_options, 'engine': self.engine_plugin})
         result: list[dict] = self.engine_plugin.execute(**publish_options)
         if not result:
             raise RuntimeError('Failed to execute publish engine. No result files')
@@ -108,7 +119,6 @@ class PublishCore:
                 version=instance.version,
             )
             files = []
-            # try:
             for file in item['published_files']:
                 file: PublishedFileFull
                 published_file = APublishedFile.create(
@@ -119,10 +129,6 @@ class PublishCore:
                     **published_file.to_dict(),
                     'orig_path': file.orig_path # add original path
                 })
-            # except Exception as e:
-            #     traceback.print_exc()
-            #     version.delete()
-
             logger.info('Create version %s for %s %s/%s' % (
                 instance.version,
                 instance.task,
@@ -131,6 +137,7 @@ class PublishCore:
 
             instance.set_results(version.to_dict(), files)
             done_instances.append(instance)
+        emit('pipe.publish.after_publish_engine_execute', {'instances': done_instances, 'engine': self.engine_plugin})
         return done_instances
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:

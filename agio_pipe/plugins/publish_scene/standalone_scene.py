@@ -1,6 +1,6 @@
 import json
 
-from agio_pipe.publish.exceptions import InstanceDuplicateError
+from agio_pipe.exceptions import InstanceDuplicateError
 from agio_pipe.publish.instance import PublishInstance
 from agio_pipe.publish.publish_scene_base_plugin import PublishSceneBasePlugin
 

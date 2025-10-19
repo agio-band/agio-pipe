@@ -7,3 +7,11 @@ class DuplicateError(AException):
 
 class PublishError(AException):
     detail = 'Publish error'
+
+
+class NoInstancesToPublishError(PublishError):
+    detail = 'No instances to publish'
+
+
+class InstanceDuplicateError(PublishError):
+    detail = 'Instance duplicate error'

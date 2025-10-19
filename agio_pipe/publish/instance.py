@@ -3,8 +3,7 @@ import uuid
 from dataclasses import dataclass, field, InitVar
 from typing import Any, TYPE_CHECKING
 
-from agio_pipe.entities import version
-from agio_pipe.entities.version import AVersion
+from agio_pipe.entities import version as vers
 
 if TYPE_CHECKING:
     from agio_pipe.entities.product import AProduct
@@ -33,12 +32,16 @@ class PublishInstance:
         self.metadata = metadata or {}
         self._version = None
         self.results = {}
+        self._enabled = True
 
     @property
     def version(self):
         if self._version is None:
-            self._version = version.AVersion.get_next_version_number(self.product.id)
+            self._version = vers.AVersion.get_next_version_number(self.product.id)
         return self._version
+
+    def set_version(self, version: int):
+        self._version = version
 
     def to_dict(self):
         data = dict(
@@ -54,11 +57,21 @@ class PublishInstance:
             data['results'] = self.results
         return data
 
-    def set_results(self, new_version: AVersion, published_files: list):
+    def set_results(self, new_version: vers.AVersion, published_files: list):
         self.results = dict(
             new_version=new_version,
             published_files=published_files
         )
+
+    def disable(self):
+        self._enabled = False
+
+    def enable(self):
+        self._enabled = True
+
+    @property
+    def enabled(self):
+        return self._enabled
 
     def __eq__(self, other):
         return all([
