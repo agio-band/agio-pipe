@@ -36,7 +36,8 @@ class APublishedFile(DomainBase):
     def create(cls, version_id: str|UUID, path: str, name: str = None) -> Self:
         name = name or Path(path).name
         data = api.pipe.create_publish_file(version_id=version_id, path=path, name=name)
-        return APublishedFile(data)
+        file = APublishedFile(data)
+        return file
 
     def delete(self) -> None:
         raise NotImplementedError()

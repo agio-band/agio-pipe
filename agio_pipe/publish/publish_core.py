@@ -105,7 +105,9 @@ class PublishCore:
             for inst in self.get_instances():
                 inst.set_version(max_version)
         emit('pipe.publish.before_publish_engine_execute', {'publish_options': publish_options, 'engine': self.engine_plugin})
+        #### start publish ###
         result: list[dict] = self.engine_plugin.execute(**publish_options)
+        ######################
         if not result:
             raise RuntimeError('Failed to execute publish engine. No result files')
         if return_result_only:
@@ -125,16 +127,17 @@ class PublishCore:
                     version_id=version.id,
                     path=file.relative_path,
                 )
-                files.append({
+                published_file_data = {
                     **published_file.to_dict(),
                     'orig_path': file.orig_path # add original path
-                })
+                }
+                files.append(published_file_data)
             logger.info('Create version %s for %s %s/%s' % (
                 instance.version,
                 instance.task,
                 instance.product.name, instance.product.variant,
             ))
-
+            emit('pipe.publish.version_created', {'version': version})
             instance.set_results(version.to_dict(), files)
             done_instances.append(instance)
         emit('pipe.publish.after_publish_engine_execute', {'instances': done_instances, 'engine': self.engine_plugin})

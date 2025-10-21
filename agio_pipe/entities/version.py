@@ -43,8 +43,8 @@ class AVersion(DomainBase):
     def create(cls,
                product_id: str|UUID,
                task_id: str|UUID,
-               fields: dict = None,
                version: int = None,
+               fields: dict = None,
         ) -> Self:
         if version is None:
             version = cls.get_next_version_number(product_id)
