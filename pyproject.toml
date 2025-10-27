@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "pyseq>=0.9.0",
 ]
+license = "MIT"
 
 [tool.setuptools]
 include-package-data = true
