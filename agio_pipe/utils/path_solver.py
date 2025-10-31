@@ -14,7 +14,7 @@ Example:
 """
 import re
 from datetime import datetime
-from agio.core.utils import extract_variable
+from agio.tools import extract_variable
 
 
 class PathTokenizerError(Exception):

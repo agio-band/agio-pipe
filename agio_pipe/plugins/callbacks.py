@@ -1,6 +1,6 @@
 import logging
 from agio.core.events import callback, AEvent
-from agio.core.pkg import APackageManager
+from agio.core.workspaces import APackageManager
 import importlib
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from agio.core.events import emit
-from agio.core.utils import plugin_hub
+from agio.core.plugins import plugin_hub
 from agio_pipe.entities import product as product_entity
 from agio_pipe.entities import task as task_domain
 from agio_pipe.entities.published_file import APublishedFile
