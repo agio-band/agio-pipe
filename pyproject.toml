@@ -1,6 +1,6 @@
 [project]
 name = "agio-pipe"
-version = "0.0.4"
+version = "0.0.5"
 description = "agio Pipeline base package"
 readme = "README.md"
 requires-python = ">=3.10"

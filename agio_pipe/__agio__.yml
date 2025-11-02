@@ -1,8 +1,7 @@
 name: agio_pipe
-version: 0.0.4
-label: agio Pipe
+label: agio.pipe
 description: |
-  Base Pipeline Utils
+  Base pipeline utils
 icon:
 tags:
   - publish
@@ -20,7 +19,7 @@ callbacks:
 project_entities_path: entities/*.py
 
 required_packages: [
-  "agio_core==0.0.2",
+  "agio_core==0.0.4",
 ]
 
 plugins:
