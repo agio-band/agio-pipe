@@ -97,7 +97,7 @@ class PublishCore:
         if len(project_ids) != 1:
             raise PublishError(detail=f'Multiple projects in single publish session is not supported ({len(project_ids)})')
         project = instances[0].project
-        project_settings = project.get_workspace().get_settings()
+        project_settings = project.get_settings()
         # sync versions
         if project_settings.get('agio_pipe.sync_instance_version_numbers', default=True): # TODO get from to different package. change parameter name
             max_version = max([inst.version for inst in self.get_instances()])

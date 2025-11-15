@@ -195,7 +195,7 @@ class TemplateSolver:
         # get template
         template = self.templates.get(template_name)
         if not template:
-            raise KeyError(f"Template '{template_name}' not found: {self.templates.keys()}")
+            raise KeyError(f"Template '{template_name}' not found: {' '.join(self.templates.keys())}")
         # tokenize template
         tokens, tmpl = self.tokenize_string(template)
         for holder, token in tokens.items():
