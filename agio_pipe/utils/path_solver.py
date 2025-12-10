@@ -16,8 +16,10 @@ import re
 from datetime import datetime
 from agio.tools import extract_variable
 
+class PathtemplateError(Exception):
+    pass
 
-class PathTokenizerError(Exception):
+class PathTokenizerError(PathtemplateError):
     pass
 
 
@@ -30,6 +32,10 @@ class EmptyValueError(PathTokenizerError):
 
 
 class IncorrectTemplateError(PathTokenizerError):
+    pass
+
+
+class TemplateNotFoundError(PathtemplateError):
     pass
 
 
@@ -127,10 +133,14 @@ class TokenRegular(TokenBase):
             raise IncorrectTemplateError
         return parts.groupdict()
 
-    def solve(self, context: dict):
+    def solve(self, context: dict, **kwargs):
         parts = self.extract_parts(self.value)
         return self.solve_variable(
-            parts["name"], context, parts['attr'], parts["formats"])
+            parts["name"],
+            context,
+            parts['attr'],
+            parts["formats"]
+        )
 
 
 class TokenOptional(TokenRegular):
@@ -175,7 +185,7 @@ class TokenExternal(TokenBase):
     )
 
     def solve(self, context: dict):
-        match = re.match(r"<([\w_]+)>", self.value)
+        match = re.match(r"<([\w_\-]+)>", self.value)
         if match:
             return match.group(1)
         raise IncorrectTemplateError
@@ -195,21 +205,36 @@ class TemplateSolver:
         # get template
         template = self.templates.get(template_name)
         if not template:
-            raise KeyError(f"Template '{template_name}' not found: {' '.join(self.templates.keys())}")
+            raise TemplateNotFoundError(f"Template '{template_name}' not found: {', '.join(self.templates.keys())}")
         # tokenize template
         tokens, tmpl = self.tokenize_string(template)
         for holder, token in tokens.items():
             token: TokenBase
-            if isinstance(token, TokenExternal):
-                template_name = token.solve(context)
-                value = self.solve(template_name, context)
-            else:
-                value = token.solve(context)
+            try:
+                if isinstance(token, TokenExternal):
+                    template_name = token.solve(context)
+                    value = self.solve(template_name, context, **kwargs)
+                else:
+                    value = token.solve(context)
+            except (VariableNotFoundError, TemplateNotFoundError):
+                if kwargs.get('keep_missing', False):
+                    value = token.value
+                else:
+                    raise
             tmpl = tmpl.replace(holder, str(value))
         # fix slashes
         if not kwargs.get('no_fix_slashes'): # disable removing multiple slashes
             tmpl = re.sub(r"\\\\+", r"\\", re.sub(r"//+", r"/", tmpl))
         return tmpl
+
+    def solve_partial(self, template_name: str, context: dict, **kwargs) -> str:
+        """
+        Expand external templates
+        Solve existing variables
+        Keep missing variables
+        """
+        kwargs['keep_missing'] = True
+        return self.solve(template_name, context, **kwargs)
 
     def tokenize_string(self, raw_template: str) -> (dict, str):
         raw_tokens = {}
