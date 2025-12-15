@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import re
 from typing import Iterator
 from uuid import UUID
 
@@ -74,6 +76,16 @@ class AProduct(DomainBase):
         entity_data = api.track.get_entity(self._data["entityId"])
         return AEntity.from_data(entity_data)
 
+    VALID_VARIANT_PATTERN = re.compile(r'''
+        ^
+        ([a-z]) | 
+        ([a-z][a-z0-9]) |
+        ([a-z][a-z0-9_]*[a-z0-9])
+        $''', re.VERBOSE)
+
+    @classmethod
+    def validate_variant_name(cls, name: str) -> bool:
+        return bool(cls.VALID_VARIANT_PATTERN.match(name))
 
 
 

@@ -25,7 +25,7 @@ class AProductType(DomainBase):
     @classmethod
     def iter(cls, **kwargs) -> Iterator['AProductType']:
         for prod in api.pipe.iter_product_types(**kwargs):
-            yield prod
+            yield cls(prod)
 
     @classmethod
     def create(cls,

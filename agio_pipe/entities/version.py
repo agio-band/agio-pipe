@@ -93,17 +93,17 @@ class AVersion(DomainBase):
         return context
 
     def iter_files_with_local_path(self):
-        from agio_pipe.utils import path_solver
+        from agio_pipe.utils import template_solver
         files = self.fields['published_files']
         if files:
             project = self.get_task().project
-            ws_settings = settings.get_workspace_settings(project.get_workspace())
+            ws_settings = project.get_settings()
             templates = ws_settings.get('agio_pipe.publish_templates')
             if templates is None:
                 raise RuntimeError('No agio publish templates configured')
             templates = {tmpl.name: tmpl.pattern for tmpl in templates}
             context = self.__get_context()
-            solver = path_solver.TemplateSolver(templates)
+            solver = template_solver.TemplateSolver(templates)
             project_root = solver.solve('project', context)
             for file in files:
                 yield Path(project_root) / file['relative_path']

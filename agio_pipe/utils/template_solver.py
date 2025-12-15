@@ -53,6 +53,7 @@ class TokenBase:
     name = None
     pattern = None
     def __init__(self, value):
+        self.raw_value = value
         self.value = value
 
     @classmethod
@@ -67,7 +68,7 @@ class TokenBase:
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.value!r}>'
 
-    def solve(self, context: dict) -> str:
+    def solve(self, context: dict, **kwargs) -> str:
         raise NotImplementedError
 
     def solve_variable(self, variable_name: str, context: dict, attributes: str = None, formats: str = None) -> str:
@@ -145,13 +146,15 @@ class TokenRegular(TokenBase):
 
 class TokenOptional(TokenRegular):
     pattern = re.compile(
+        r"("
         r"\(!?[^(){}]*" # opening optional parenthesis 
-        r"\{[^}]+}"     # variable
-        r"[^(){}]*\)",  # closing optional parenthesis
+        r"\{[^}]+}"      # variable
+        r"[^(){}]*\)"    # closing optional parenthesis
+        r")",
         re.VERBOSE
     )
 
-    def solve(self, context: dict):
+    def solve(self, context: dict, **kwargs):
         match = re.match(
             r"\("                   # opening optional parenthesis 
             r"(?P<strong>!?)"       # strong or not: mark "!"
@@ -168,6 +171,8 @@ class TokenOptional(TokenRegular):
         try:
             result = super().solve(context)
         except VariableNotFoundError:
+            if kwargs.get('skip_empty_values', False):
+                raise
             return ''
         except EmptyValueError:
             if skip_empty_values:
@@ -201,6 +206,9 @@ class TemplateSolver:
     def __init__(self, template_list: dict):
         self.templates = template_list
 
+    def add_template(self, name: str, pattern: str) -> None:
+        self.templates[name] = pattern
+
     def solve(self, template_name: str, context: dict, **kwargs) -> str:
         # get template
         template = self.templates.get(template_name)
@@ -215,10 +223,13 @@ class TemplateSolver:
                     template_name = token.solve(context)
                     value = self.solve(template_name, context, **kwargs)
                 else:
-                    value = token.solve(context)
+                    if kwargs.get('keep_missing'):
+                        # force raise error for non exists variable to pass through raw value
+                        kwargs['skip_empty_values'] = True
+                    value = token.solve(context, **kwargs)
             except (VariableNotFoundError, TemplateNotFoundError):
                 if kwargs.get('keep_missing', False):
-                    value = token.value
+                    value = token.raw_value
                 else:
                     raise
             tmpl = tmpl.replace(holder, str(value))
@@ -255,6 +266,11 @@ class TemplateSolver:
             else:
                 break
         return raw_tokens, raw_template
+
+    def get_variables(self, template_name: str, **kwargs) -> list[str]:
+        full_pattern = self.solve_partial(template_name, {}, **kwargs)
+        tokens = self.tokenize_string(full_pattern)[0]
+        return [token.value.strip('{}').split(':')[0] for token in tokens.values()]
 
 
 if __name__ == '__main__':
