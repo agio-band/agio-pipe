@@ -1,13 +1,11 @@
 from __future__ import annotations
+
 import uuid
-from dataclasses import dataclass, field, InitVar
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from agio_pipe.entities import version as vers
-
-if TYPE_CHECKING:
-    from agio_pipe.entities.product import AProduct
-    from agio_pipe.entities.task import ATask
+from agio_pipe.entities.product import AProduct
+from agio_pipe.entities.task import ATask
 
 
 class PublishInstance:
@@ -20,19 +18,25 @@ class PublishInstance:
             id: str = None,
             options: dict[str, Any] = None,
             dependencies: list[str] = None,
-            metadata: dict[str, Any] = None
+            data: dict[str, Any] = None
         ):
         self.id = id or uuid.uuid4().hex
         self.task = ATask(task) if isinstance(task, (str, uuid.UUID)) else task
-        self.product = AProduct(product) if isinstance(product, (str | uuid.UUID)) else product
+        self.product = AProduct(product) if isinstance(product, (str, uuid.UUID)) else product
         self.name = name or f'{self.task.entity.name}_{self.task.name}_{self.product.name}_{self.product.variant}'
         self.sources = sources or []
         self.options = options or {}
         self.dependencies = dependencies or []
-        self.metadata = metadata or {}
+        self.data = data or {}
         self._version = None
         self.results = {}
         self._enabled = True
+
+    def set_value(self, key: str, value: Any):
+        self.data[key] = value
+
+    def get_value(self, key: str, default: Any = None) -> Any:
+        return self.data.get(key, default)
 
     @property
     def version(self):
@@ -43,7 +47,7 @@ class PublishInstance:
     def set_version(self, version: int):
         self._version = version
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         data = dict(
             id=self.id,
             name=self.name,
@@ -51,11 +55,28 @@ class PublishInstance:
             product_id=self.product.id,
             sources=self.sources,
             options=self.options,
-            metadata=self.metadata,
+            data=self.data,
+            version=self._version,
         )
         if self.results:
             data['results'] = self.results
         return data
+
+    @classmethod
+    def from_dict(cls, instance_data: dict[str, Any]) -> PublishInstance:
+        inst = PublishInstance(
+            id=instance_data['id'],
+            task=ATask(instance_data['task_id']),
+            product=AProduct(instance_data['product_id']),
+            sources=instance_data['sources'],
+            name=instance_data['name'],
+            options=instance_data.get('options') or {},
+            dependencies=instance_data.get('dependencies') or [],
+            data=instance_data['data'] or {},
+        )
+        if 'version' in instance_data:
+            inst.set_version(instance_data['version'])
+        return inst
 
     def set_results(self, new_version: vers.AVersion, published_files: list):
         self.results = dict(
@@ -79,9 +100,13 @@ class PublishInstance:
             self.product.id == other.product.id,
         ])
 
+    def __hash__(self):
+        return hash(f'{self.task.name}{self.product.name}{self.product.variant}')
+
     def __repr__(self) -> str:
-        return f'<Instance {self.task.name}/{self.product.type}.{self.product.variant}>'
+        return f'<Instance {self.task.name}/{self.product.name}.{self.product.variant}>'
 
     @property
     def project(self):
         return self.task.project
+
