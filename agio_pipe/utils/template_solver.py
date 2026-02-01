@@ -267,7 +267,7 @@ class TemplateSolver:
                 break
         return raw_tokens, raw_template
 
-    def get_variables(self, template_name: str, **kwargs) -> list[str]:
+    def get_variables(self, template_name: str, required_only=False, **kwargs) -> list[str]:
         full_pattern = self.solve_partial(template_name, {}, **kwargs)
         tokens = self.tokenize_string(full_pattern)[0]
         return [token.value.strip('{}').split(':')[0] for token in tokens.values()]

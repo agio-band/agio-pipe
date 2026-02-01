@@ -1,19 +1,21 @@
 from __future__ import annotations
+
 import json
 import tempfile
 from collections import defaultdict
 from enum import StrEnum
 from pathlib import Path
-from uuid import uuid4, UUID
 from typing import Any, Generator
+from uuid import uuid4, UUID
 
+from agio.core.entities import AWorkspace
 from agio.core.events import emit
+from agio.core.settings.settings_hub import WorkspaceSettingsHub
 from agio.tools import app_dirs
 from agio.tools.data_types import deep_tree
 from agio.tools.json_serializer import to_simple_dict
 from .exceptions import SessionSuspended
 from .instance import PublishInstance
-
 
 
 class PublishSession:
@@ -26,9 +28,10 @@ class PublishSession:
         DONE = 'DONE'
         FAILED = 'FAILED'
 
-    def __init__(self, session_id: str = None) -> None:
+    def __init__(self, session_id: str = None, workspace_id: str = None, **kwargs) -> None:
         self.id: str = session_id or str(uuid4())
         self._data: dict = self._init_session_data(session_id)
+        self.settings = self._init_settings(workspace_id)
 
     def __enter__(self):
         """
@@ -36,13 +39,13 @@ class PublishSession:
         """
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # TODO: update status in DB
         if isinstance(exc_tb, SessionSuspended):
             self.set_status(self.STATUS.SUSPENDED)
             return True
         else:
             self.set_status(self.STATUS.FAILED)
             return False
-        # TODO: update status in DB
 
     def __str__(self):
         return self.id
@@ -65,12 +68,19 @@ class PublishSession:
                 }
             return session_data
 
+    def _init_settings(self, workspace_id: str) -> WorkspaceSettingsHub:
+        if workspace_id is None:
+            ws = AWorkspace.current()
+        else:
+            ws = AWorkspace(workspace_id)
+        return ws.get_revision().get_settings()
+
     def to_dict(self) -> dict:
 
         def entity_encode(obj):
             if hasattr(obj, 'to_dict'):
                 return obj.to_dict()
-            raise TypeError
+            raise TypeError(f'Cant serialize to dict: {type(obj)} {obj}')
 
         return {
             'id': self.id,
@@ -114,7 +124,7 @@ class PublishSession:
 
     @property
     def data(self):
-        return dict(self._data)
+        return self._data
 
     def set_value(self, key: str, value: Any) -> None:
         self._data['context'][key] = value
@@ -133,9 +143,9 @@ class PublishSession:
     def add_instance(self, instance: PublishInstance):
         if not isinstance(instance, PublishInstance):
             raise TypeError(f"Instance object must be type PublishInstance, not {type(instance)}")
-        if instance.id in (inst.id for inst in self.instances):
+        if instance.id in self.instances:
             raise ValueError(f"Instance with ID {instance.id} already exists")
-        if instance in self.instances:
+        if instance in self.instances.values():
             raise ValueError(f"Instance with same product and task already exists: {instance}")
         self._data['instances'][instance.id] = instance
         emit('pipe.publish.instance_added', {'instance': instance, 'session': self})

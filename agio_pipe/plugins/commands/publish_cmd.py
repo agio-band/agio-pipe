@@ -19,7 +19,7 @@ class PublishCommand(ACommandPlugin):
         ),
         click.option("-t", "--task-id", help='Task ID for ui context', required=False),
         click.option("-u", "--ui", is_flag=True, help='Open Publish Tool Dialog'),
-        click.option("-i", "--instances", multiple=True, help='Instances to publish by name (default all)'),
+        click.option("-i", "--instances", multiple=True, help='Instances to publish by name (default all)', required=False),
         click.option("-o", "--output-file", help='JSON file to save report'),
     ]
     allow_extra_args = True

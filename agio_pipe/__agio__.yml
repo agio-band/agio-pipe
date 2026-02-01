@@ -33,9 +33,17 @@ plugins:
       - module: plugins/commands/pipe_info_cmd.py
 
   # publish scene api
-  - label: Publish Scene Standalone
+#  - label: Publish Scene Standalone
+#    implementations:
+#      - module: plugins/publish_scene/standalone_scene.py
+#        apps:
+#          - standalone
+
+chips:
+  - name: Simple Scene Chip
     implementations:
-      - module: plugins/publish_scene/standalone_scene.py
+      - module:
+          - chips/**/*.py
         apps:
           - standalone
 
@@ -46,4 +54,3 @@ settings:
   workspace:
 #    layout: package_settings/workspace_layout.yml
     model: package_settings.workspace_settings.PipeWorkspaceSettings
-

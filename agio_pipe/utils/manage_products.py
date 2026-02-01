@@ -1,6 +1,7 @@
-import json
 import os
 from pathlib import Path
+
+import yaml
 
 from agio.core.entities.entity import AEntity
 from agio_pipe.entities.product import AProduct
@@ -26,7 +27,7 @@ def create_product_from_template(
         product_name_template: 'prodict_default'
         publish_file_template: 'publish_file_name'
         publish_dir_template: 'publish_dir'
-        publish_options: {}
+        fields: {}
     """
     if isinstance(entity, str):
         entity = AEntity.from_id(entity)
@@ -38,22 +39,22 @@ def create_product_from_template(
         raise ValueError('product_name_template must be specified')
     if 'publish_dir_template' not in product_template:
         raise ValueError('publish_dir_template must be specified')
-
+    context = context or {}
     # solve product name
     templates = _load_templates(entity.project)
-    if not all([name in templates for name in (
+    for t_name in (
             product_template['product_name_template'],
             product_template['publish_file_template'],
             product_template['publish_dir_template'],
-    )]):
-        raise ValueError('product_name_template and publish_file_template and publish_dir_template'
-                         ' must be specified in product template')
+        ):
+        if t_name not in templates:
+            raise ValueError(f'template name {t_name} not found in project settings')
     product_type = AProductType(product_template['product_type_id'])
     render_context = {
         'entity': entity,
         'project': entity.project,
         'product_type': product_type,
-        **context
+        **(context or {})
     }
 
     if task:
@@ -64,9 +65,9 @@ def create_product_from_template(
     product_name_template_name = product_template['product_name_template']
     product_name_template = templates[product_name_template_name]
     variables = solver.get_variables(product_name_template_name)
-    missing = set(variables) - set(context.keys())
-    if missing:
-        raise ValueError(f'Missing variables in context which used in template: {missing}')
+    # missing = set(variables) - set(context.keys())
+    # if missing:
+    #     raise ValueError(f'Missing variables in context which used in template: {missing}')
 
     # using variant in product name is disabled
     if 'variant' in variables:
@@ -89,9 +90,10 @@ def create_product_from_template(
         raise ValueError('version variable is required for publish path template')
 
     # collect fields
+    extra_fields = extra_fields or {}
     fields = extra_fields.copy()
     fields.update({
-        'publish_options': product_template.get('publish_options', {}),
+        **product_template.get('fields', {}),
         'publish_file_template_name': product_template['publish_file_template'],
         'publish_dir_template_name': product_template['publish_dir_template'],
         'hidden': product_template.get('hidden', False),
@@ -121,16 +123,16 @@ def _load_templates(project):
     return {template.name: template.pattern for template in templates}
 
 
-def get_product_template(project)->dict|None:
+def get_product_templates(project)->dict|None:
     # TODO: load from settings
     templates_path = os.getenv('AGIO_PRODUCT_TEMPLATES_PATH')
     if not templates_path:
         raise ValueError('AGIO_PRODUCT_TEMPLATES_PATH environment variable is not set')
-    templates_file = Path(templates_path, project.code).with_suffix('.json')
+    templates_file = Path(templates_path, project.code).with_suffix('.yml')
     if not templates_file.exists():
         return {}
     with templates_file.open() as f:
-        return json.load(f)
+        return yaml.safe_load(f)
 
 
 def create_product_instance(product: AProduct) -> PublishInstance:
