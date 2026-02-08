@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from agio_pipe.base_classes.export_container import ExportContainerBase
 from agio_pipe.entities import version as vers
 from agio_pipe.entities.product import AProduct
 from agio_pipe.entities.task import ATask
@@ -77,6 +78,19 @@ class PublishInstance:
         if 'version' in instance_data:
             inst.set_version(instance_data['version'])
         return inst
+
+    @classmethod
+    def from_export_container(cls, container: ExportContainerBase) -> PublishInstance:
+        return cls(
+            task=container.get_task(),
+            product=container.get_product(),
+            sources=container.get_sources(),
+            name=container.name,
+            options=container.get_options(),
+            dependencies=container.get_dependencies()
+            # metadata
+            # data
+        )
 
     def set_results(self, new_version: vers.AVersion, published_files: list):
         self.results = dict(
