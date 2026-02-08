@@ -55,33 +55,30 @@ class PublishCore:
         if scene_file is not None:
             # get publish scene class for current app
             scene_cls = self.get_scene_api_class(publish_options)
-            # load file
             scene_plugin = scene_cls()
             scene_plugin.load(scene_file)
-            # collect instances
             for cont in scene_plugin.iter_scene_containers():
                 cont: ExportContainerBase
-                inst = self._create_instance_from_container(cont)
+                inst = PublishInstance.from_export_container(cont)
                 logger.info('Instance created: %s', inst)
                 session.add_instance(inst)
-        # get publish plugin
         publish_plugin = self.get_engine_plugin()
-        # start processing
+        # start main processing
         with session:
             publish_plugin.execute(session, **self.get_plugin_parameters(), **publish_options)
 
-    def _create_instance_from_container(self, container: ExportContainerBase) -> PublishInstance:
-        return PublishInstance(
-            # id=container.id,
-            task=container.get_task(),
-            product=container.get_product(),
-            sources=container.get_sources(),
-            name=container.name,
-            options=container.get_options(),
-            # dependencies
-            # metadata
-            # data
-        )
+    # def _create_instance_from_container(self, container: ExportContainerBase) -> PublishInstance:
+    #     return PublishInstance(
+    #         # id=container.id,
+    #         task=container.get_task(),
+    #         product=container.get_product(),
+    #         sources=container.get_sources(),
+    #         name=container.name,
+    #         options=container.get_options(),
+    #         # dependencies
+    #         # metadata
+    #         # data
+    #     )
 
     def _start_publishing_(self, scene_file: str|dict = None,
                          return_result_only: bool = False, **options) -> list[PublishInstance] | list[dict]:
