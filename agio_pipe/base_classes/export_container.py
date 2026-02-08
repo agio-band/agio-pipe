@@ -115,6 +115,12 @@ class ExportContainerBase(ABC):
         """
 
     @abstractmethod
+    def get_dependencies(self) -> list[str]:
+        """
+        Get depend publish version ids
+        """
+
+    @abstractmethod
     def set_task(self, task: task_.ATask):
         """
         Save task to the container

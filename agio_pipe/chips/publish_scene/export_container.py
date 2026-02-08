@@ -67,6 +67,9 @@ class ExportContainer(ExportContainerBase):
         else:
             raise ValueError('Product ID or Type name must be provided')
 
+    def get_dependencies(self):
+        return [] # TODO
+
     def set_task(self, task: ATask):
         self.scene_object['task'] = task
 

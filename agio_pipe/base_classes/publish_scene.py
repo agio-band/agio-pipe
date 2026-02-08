@@ -39,40 +39,34 @@ class PublishSceneBase(ABC):
             task: ATask,
             product: product_entity.AProduct,
             sources: list[str] = None,
-            id: str = None,
         ) -> ExportContainerBase:
         if not isinstance(sources, Iterable):
             raise TypeError("Sources must be a list")
         cont_cls = self.get_export_container_class()
-        cont = cont_cls.create(name=name, task=task, product=product, sources=sources)#, id=id)
-        self.create_scene_container(cont)
+        cont = cont_cls.create(name=name, task=task, product=product, sources=sources)
         return cont
-
-    @abstractmethod
-    def create_scene_container(self, container: ExportContainerBase):
-        ...
 
     def _validate_duplicate(self, container: ExportContainerBase):
         if self.find_container_in_scene(container.id) is not None:
             raise DuplicateError(container.id)
 
     @abstractmethod
-    def remove_scene_container(self, container_id: str) -> ExportContainerBase|None:
+    def remove_container(self, container_id: str) -> ExportContainerBase|None:
         ...
 
     @abstractmethod
-    def iter_scene_containers(self) -> Generator[ExportContainerBase, None, None]:
+    def iter_containers(self) -> Generator[ExportContainerBase, None, None]:
         ...
 
-    def get_scene_containers_dict(self):
-        return [cont.to_dict() for cont in self.get_scene_containers()]
+    def get_containers_dict(self):
+        return [cont.to_dict() for cont in self.get_containers()]
 
-    def get_scene_containers(self) -> tuple[ExportContainerBase, ...]:
-        return tuple(self.iter_scene_containers())
+    def get_containers(self) -> tuple[ExportContainerBase, ...]:
+        return tuple(self.iter_containers())
 
 
     def find_container_in_scene(self, container_id: str) -> ExportContainerBase|None:
-        for cont in self.iter_scene_containers():
+        for cont in self.iter_containers():
             if cont.id == container_id:
                 return cont
         return None
