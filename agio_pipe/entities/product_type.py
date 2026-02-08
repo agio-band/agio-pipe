@@ -22,6 +22,11 @@ class AProductType(DomainBase):
     def set_config(self, config: dict) -> None:
         return self.update(config=config)
 
+    def get_config(self) -> dict:
+        if 'config' not in self._data:
+            self.reload()
+        return self._data.get("config", {})
+
     @classmethod
     def iter(cls, **kwargs) -> Iterator['AProductType']:
         for prod in api.pipe.iter_product_types(**kwargs):
@@ -58,9 +63,6 @@ class AProductType(DomainBase):
     def data_type(self) -> str:
         return self._data["dataType"]
 
-    @property
-    def config(self) -> dict:
-        return self._data["config"]
 
 
 

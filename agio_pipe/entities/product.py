@@ -53,11 +53,11 @@ class AProduct(DomainBase):
              entity_id: str | UUID,
              name: str,
              variant: str = None,
-             **kwargs):
+             **kwargs) -> AProduct|None:
         data = api.pipe.find_product(entity_id=entity_id, name=name, variant=variant)
-        if not data:
-            return
-        return cls(data)
+        if data:
+            return cls(data)
+        return None
 
     @property
     def name(self) -> str:
@@ -76,12 +76,7 @@ class AProduct(DomainBase):
         entity_data = api.track.get_entity(self._data["entityId"])
         return AEntity.from_data(entity_data)
 
-    VALID_VARIANT_PATTERN = re.compile(r'''
-        ^
-        ([a-z]) | 
-        ([a-z][a-z0-9]) |
-        ([a-z][a-z0-9_]*[a-z0-9])
-        $''', re.VERBOSE)
+    VALID_VARIANT_PATTERN = re.compile(r'^[a-z](?:[a-z0-9_]*[a-z0-9])?$')
 
     @classmethod
     def validate_variant_name(cls, name: str) -> bool:
