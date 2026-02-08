@@ -73,7 +73,7 @@ class PublishSession:
             ws = AWorkspace.current()
         else:
             ws = AWorkspace(workspace_id)
-        return ws.get_revision().get_settings()
+        return ws.get_current_revision().get_settings()
 
     def to_dict(self) -> dict:
 
@@ -81,7 +81,6 @@ class PublishSession:
             if hasattr(obj, 'to_dict'):
                 return obj.to_dict()
             raise TypeError(f'Cant serialize to dict: {type(obj)} {obj}')
-
         return {
             'id': self.id,
             **to_simple_dict(self._data, entity_encode)
