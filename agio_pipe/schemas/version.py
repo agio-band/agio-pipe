@@ -12,5 +12,4 @@ class AVersionCreateSchema(BaseModel):
 
 class PublishedFileFull(BaseModel):
     orig_path: str|None
-    path: str
-    relative_path: str
+    publish_path: str
