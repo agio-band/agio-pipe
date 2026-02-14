@@ -52,7 +52,7 @@ class ExportContainer(ExportContainerBase):
         return False
 
     def get_sources(self):
-        return self.scene_object['sources']
+        return self.scene_object.get('sources', ())
 
     def set_product(self, product: AProduct):
         self.scene_object['product'] = product
