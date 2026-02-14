@@ -112,6 +112,10 @@ class PublishSession:
     def session_file(cls, session_id: str) -> Path:
         return cls.store_path.joinpath(session_id).with_suffix('.json')
 
+    @property
+    def dump_file(self):
+        return self.session_file(self.id)
+
     ###########################################################
 
     def set_status(self, status: STATUS) -> None:
