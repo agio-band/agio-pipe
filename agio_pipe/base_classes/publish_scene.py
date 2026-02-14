@@ -40,8 +40,6 @@ class PublishSceneBase(ABC):
             product: product_entity.AProduct,
             sources: list[str] = None,
         ) -> ExportContainerBase:
-        if not isinstance(sources, Iterable):
-            raise TypeError("Sources must be a list")
         cont_cls = self.get_export_container_class()
         cont = cont_cls.create(name=name, task=task, product=product, sources=sources)
         return cont
