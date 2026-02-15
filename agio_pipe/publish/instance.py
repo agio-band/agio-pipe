@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from agio.core.entities import DomainBase
 from agio_pipe.base_classes.export_container import ExportContainerBase
 from agio_pipe.entities import version as vers
 from agio_pipe.entities.product import AProduct
@@ -30,7 +31,7 @@ class PublishInstance:
         self.dependencies = dependencies or []
         self.data = data or {}
         self._version = None
-        self.results = {}
+        self._results = {}
         self._enabled = True
 
     def set_value(self, key: str, value: Any):
@@ -48,7 +49,7 @@ class PublishInstance:
     def set_version(self, version: int):
         self._version = version
 
-    def to_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         data = dict(
             id=self.id,
             name=self.name,
@@ -58,13 +59,22 @@ class PublishInstance:
             options=self.options,
             data=self.data,
             version=self._version,
+            enabled=self._enabled,
         )
-        if self.results:
-            data['results'] = self.results
+        if self._results:
+            data['results'] = self._results
         return data
 
     @classmethod
     def from_dict(cls, instance_data: dict[str, Any]) -> PublishInstance:
+        # restore entities from dicts in data
+        inst_data = {}
+        instance_data['data'] = instance_data.get('data') or {}
+        for k, v in instance_data['data'].items():
+            if isinstance(v, dict) and '_' in v:
+                inst_data[k] = DomainBase.deserialize(v)
+            else:
+                inst_data[k] = v
         inst = PublishInstance(
             id=instance_data['id'],
             task=ATask(instance_data['task_id']),
@@ -73,10 +83,15 @@ class PublishInstance:
             name=instance_data['name'],
             options=instance_data.get('options') or {},
             dependencies=instance_data.get('dependencies') or [],
-            data=instance_data['data'] or {},
+            data=inst_data,
         )
         if 'version' in instance_data:
             inst.set_version(instance_data['version'])
+        if 'results' in instance_data:
+            inst.set_results(**instance_data['results'])
+        if 'enable' in instance_data:
+            if not instance_data['enable']:
+                inst.disable()
         return inst
 
     @classmethod
@@ -93,10 +108,15 @@ class PublishInstance:
         )
 
     def set_results(self, new_version: vers.AVersion, published_files: list):
-        self.results = dict(
+        if isinstance(new_version, dict):
+            new_version = DomainBase.deserialize(new_version)
+        self._results = dict(
             new_version=new_version,
             published_files=published_files
         )
+
+    def get_results(self):
+        return self._results
 
     def disable(self):
         self._enabled = False
