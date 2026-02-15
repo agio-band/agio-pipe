@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import json
 import tempfile
+import traceback
 from collections import defaultdict
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any, Generator, Union
 from uuid import uuid4, UUID
 
 from agio.core.entities import AWorkspace
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
 from agio.tools import app_dirs
-from agio.tools.data_types import deep_tree
+from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
 from .exceptions import SessionSuspended
 from .instance import PublishInstance
@@ -32,6 +33,7 @@ class PublishSession:
         self.id: str = session_id or str(uuid4())
         self._data: dict = self._init_session_data(session_id)
         self.settings = self._init_settings(workspace_id)
+        self._dry_run = False
 
     def __enter__(self):
         """
@@ -44,8 +46,11 @@ class PublishSession:
             self.set_status(self.STATUS.SUSPENDED)
             return True
         else:
-            self.set_status(self.STATUS.FAILED)
+            self.on_error(exc_val)
             return False
+
+    def set_dry_run(self, dry_run: bool) -> None:
+        self._dry_run = dry_run
 
     def __str__(self):
         return self.id
@@ -75,23 +80,28 @@ class PublishSession:
             ws = AWorkspace(workspace_id)
         return ws.get_current_revision().get_settings()
 
+    def serialize(self):
+        return self.to_dict()
+
     def to_dict(self) -> dict:
 
         def entity_encode(obj):
-            if hasattr(obj, 'to_dict'):
-                return obj.to_dict()
+            if hasattr(obj, 'serialize'):
+                return obj.serialize()
             raise TypeError(f'Cant serialize to dict: {type(obj)} {obj}')
         return {
             'id': self.id,
             **to_simple_dict(self._data, entity_encode)
         }
 
-    def dump(self) -> Path:
-        data = self.to_dict()
+    def dump(self) -> Path|None:
+        if self._dry_run:
+            return None
+        data = self.serialize()
         session_path = self.session_file(self.id)
         session_path.parent.mkdir(parents=True, exist_ok=True)
         with session_path.open('w') as session_file:
-            json.dump(data, session_file, indent=2)
+            json.dump(data, session_file, indent=2, ensure_ascii=False)
         return session_path
 
     @classmethod
@@ -120,10 +130,20 @@ class PublishSession:
 
     def set_status(self, status: STATUS) -> None:
         self._data['status'] = status
+        self.dump()
 
     @property
     def status(self):
         return self._data.get('status') or self.STATUS.PENDING
+
+    def on_error(self, error: Union[str, type[BaseException]]) -> None:
+        err = {
+            'message': str(error),
+        }
+        if isinstance(error, Exception):
+            err['traceback'] = ''.join(traceback.format_exception(error))
+        self._data['error'] = err
+        self.set_status(self.STATUS.FAILED)
 
     @property
     def data(self):
