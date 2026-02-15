@@ -26,7 +26,8 @@ class PublishCore:
     """
     def __init__(self, options: dict[str, Any] = None):
         self._options = options or {}
-        self.ws_settings: settings_hub.WorkspaceSettingsHub = AWorkspace.current().get_settings()
+        self.ws = AWorkspace.current()
+        self.settings: settings_hub.WorkspaceSettingsHub = self.ws.get_settings()
 
     def set_option(self, key: str, value: Any):
         self._options[key] = value
@@ -38,9 +39,7 @@ class PublishCore:
     def options(self):
         return self._options
 
-    def start_publishing(self, scene_file: str | dict = None,
-                         return_result_only: bool = False,
-                         **options) -> None:
+    def start_publishing(self, scene_file: str | dict = None, **options) -> PublishSession:
         publish_options = copy.deepcopy(self.options)
         publish_options.update(options)
         emit('pipe.publish.before_start', {'publish_options': publish_options})
@@ -69,8 +68,11 @@ class PublishCore:
         # start main processing
         parameters = self.get_plugin_parameters()
         parameters.update(publish_options)
+        parameters.update(options)
+        logger.info('Session dump path %s', session.dump_file)
         with session:
             publish_plugin.execute(session, **parameters)
+        return session
 
     def get_engine_name(self, options: dict[str, Any]) -> str:
         # from options
@@ -81,10 +83,10 @@ class PublishCore:
         if publish_engine_name:
             return publish_engine_name
         # from settings
-        publish_engine_name = self.ws_settings.get('agio_pipe.publish_engine_name', default=None)
+        publish_engine_name = self.settings.get('agio_pipe.publish_plugin', default=None)
         if publish_engine_name:
             return publish_engine_name
-        raise SettingsParameterNotExists('Parameter "publish_engine_name" is not defined')
+        raise SettingsParameterNotExists('Parameter "agio_pipe.publish_plugin" is not defined')
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
         engine_name = self.get_engine_name(self._options)
@@ -96,7 +98,7 @@ class PublishCore:
 
     def get_scene_api_class(self,options: dict[str, Any]) -> Callable:
         chip_name = (options.get('publish_scene_chip_name') or
-                    self.ws_settings.get('agio_pipe.publish_scene', default=None)
+                    self.settings.get('agio_pipe.publish_scene', default=None)
                      or 'default')
         cls = chips_hub.find_chip('publish_scene', chip_name)
         if not cls:
