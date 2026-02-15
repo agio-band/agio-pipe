@@ -78,6 +78,7 @@ class AVersion(DomainBase):
             id=self.id,
             entity=self._data['entity'],
             fields=self._data['fields'],
+            name=self._data['name'], # for deserialize
             version=self.version_number,
             product=self.get_product().to_dict(),
         )
