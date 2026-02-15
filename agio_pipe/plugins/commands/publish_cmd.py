@@ -20,20 +20,21 @@ class PublishCommand(ACommandPlugin):
         click.option("-t", "--task-id", help='Task ID for ui context', required=False),
         click.option("-u", "--ui", is_flag=True, help='Open Publish Tool Dialog'),
         click.option("-i", "--instances", multiple=True, help='Instances to publish by name (default all)', required=False),
-        click.option("-o", "--output-file", help='JSON file to save report'),
+        click.option("-s", "--session-id", help='Suspended session ID', required=False),
+        click.option("-d", "--dry-run", is_flag=True, help='Dry run'),
     ]
     allow_extra_args = True
 
-    def execute(self, scene_file: str, task_id: str, ui: bool, instances: tuple, output_file: str, **kwargs):
+    def execute(self, scene_file: str, task_id: str, ui: bool, instances: tuple, dry_run: str, session_id: str, **kwargs):
         if ui:
             self.open_dialog(scene_file, task_id, instances)
         else:
-            if not scene_file:
-                raise click.BadParameter('The scene_file not provided')
+            if not scene_file and not session_id:
+                raise click.BadParameter('The scene_file or session ID not provided')
             extra_args, extra_kwargs = self.parse_extra_args(kwargs)
             if extra_args:
                 raise click.BadParameter('Extra non keyword arguments provided but not supported')
-            self.start_publish(scene_file, instances, **extra_kwargs)
+            self.start_publish(scene_file, instances, dry_run=dry_run, session_id=session_id, **extra_kwargs)
 
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
         click.secho('Open Publisher Dialog...', fg='yellow')
