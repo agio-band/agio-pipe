@@ -1,3 +1,4 @@
+import os
 from typing import Iterator
 from uuid import UUID
 
@@ -22,7 +23,18 @@ class AProductType(DomainBase):
     def set_config(self, config: dict) -> None:
         return self.update(config=config)
 
+    def __get_config_from_file(self) -> dict|None:
+        from agio.tools import modules
+        func_name = os.getenv('AGIO_GET_PRODUCT_CONFIG_FUNC')
+        if func_name:
+            func = modules.import_object_by_dotted_path(func_name)
+            return func(self.name)
+        return None
+
     def get_config(self) -> dict:
+        from_file = self.__get_config_from_file()
+        if from_file:
+            return from_file
         if 'config' not in self._data:
             self.reload()
         return self._data.get("config", {})
