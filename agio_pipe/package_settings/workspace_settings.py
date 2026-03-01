@@ -1,16 +1,16 @@
 from typing import Optional
 
-from agio.core.settings import APackageSettings, JSONField, PluginSelectField, ListField
+from agio.core.settings import APackageSettings, JSONField, PluginSelectField, ListField, StringField
 from pydantic import BaseModel, Field
 
 from agio.core.settings.fields.special_fields import ChipSelectField
 
-TemplateType = dict[str, str]
+# TemplateType = dict[str, str]
 
 
 class PublishTemplate(BaseModel):
     name: str
-    patterns: TemplateType = Field(..., json_schema_extra=dict(widget='PathTemplate'))
+    path: str = StringField(..., json_schema_extra=dict(widget='PathTemplate'))
     variables: dict[str, str] = Field(default_factory=dict)
 
 

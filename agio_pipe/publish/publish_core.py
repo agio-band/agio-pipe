@@ -13,9 +13,9 @@ from agio.core.plugins import plugin_hub
 from agio.core.settings import settings_hub
 from agio_pipe.base_classes.export_container import ExportContainerBase
 from agio_pipe.exceptions import PublishError
-from agio_pipe.publish.instance import PublishInstance
+from agio_pipe.publish import instance
 from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
-from agio_pipe.publish.publish_session import PublishSession
+from agio_pipe.publish import publish_session
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,12 @@ class PublishCore:
     def options(self):
         return self._options
 
-    def start_publishing(self, scene_file: str | dict = None, **options) -> PublishSession:
+    def start_publishing(self, scene_file: str | dict = None, **options) -> publish_session.PublishSession:
         publish_options = copy.deepcopy(self.options)
         publish_options.update(options)
         emit('pipe.publish.before_start', {'publish_options': publish_options})
         # create or restore session
-        session = PublishSession(session_id=options.pop('session_id', None))
+        session = publish_session.PublishSession(session_id=options.pop('session_id', None))
         # open scene of provided
         if scene_file is not None:
             # get publish scene class for current app
@@ -53,7 +53,7 @@ class PublishCore:
             scene_plugin.load(scene_file)
             for cont in scene_plugin.iter_containers():
                 cont: ExportContainerBase
-                inst = PublishInstance.from_export_container(cont)
+                inst = instance.PublishInstance.from_export_container(cont)
                 logger.info('Instance created: %s', inst)
                 session.add_instance(inst)
         if not session.instances:

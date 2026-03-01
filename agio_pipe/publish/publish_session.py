@@ -16,7 +16,7 @@ from agio.tools import app_dirs
 from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
 from .exceptions import SessionSuspended
-from .instance import PublishInstance
+from . import instance as inst
 
 
 class PublishSession:
@@ -34,6 +34,7 @@ class PublishSession:
         self._data: dict = self._init_session_data(session_id)
         self.settings = self._init_settings(workspace_id)
         self._dry_run = False
+        print('Session path:', self.dump_file)
 
     def __enter__(self):
         """
@@ -68,7 +69,7 @@ class PublishSession:
             session_data.update(data)
             if session_data['instances']:
                 session_data['instances'] = {
-                    inst_id: PublishInstance.from_dict(data)
+                    inst_id: inst.PublishInstance.from_dict(data)
                     for inst_id, data in session_data['instances'].items()
                 }
             return session_data
@@ -163,9 +164,9 @@ class PublishSession:
     def instances(self):
         return dict(self._data.get('instances', {}))
 
-    def add_instance(self, instance: PublishInstance):
-        if not isinstance(instance, PublishInstance):
-            raise TypeError(f"Instance object must be type PublishInstance, not {type(instance)}")
+    def add_instance(self, instance: inst.PublishInstance):
+        if not isinstance(instance, inst.PublishInstance):
+            raise TypeError(f"Instance object must be typeinstance.PublishInstance, not {type(instance)}")
         if instance.id in self.instances:
             raise ValueError(f"Instance with ID {instance.id} already exists")
         if instance in self.instances.values():
@@ -174,8 +175,8 @@ class PublishSession:
         emit('pipe.publish.instance_added', {'instance': instance, 'session': self})
         return instance
 
-    def remove_instance(self, instance_id: UUID | PublishInstance | str):
-        if isinstance(instance_id, PublishInstance):
+    def remove_instance(self, instance_id: UUID |inst.PublishInstance | str):
+        if isinstance(instance_id, inst.PublishInstance):
             instance_id = instance_id.id
         elif isinstance(instance_id, UUID):
             instance_id = str(instance_id)
@@ -184,25 +185,25 @@ class PublishSession:
             raise ValueError(f"Instance {instance_id} not registered")
         del self.instances[instance_id]
 
-    def get_instance(self, instance_id: UUID | str) -> PublishInstance | None:
+    def get_instance(self, instance_id: UUID | str) -> inst.PublishInstance | None:
         if isinstance(instance_id, UUID):
             instance_id = str(instance_id)
         return self.instances.get(instance_id)
 
-    def has_instance(self, instance_id: UUID | str | PublishInstance) -> bool:
+    def has_instance(self, instance_id: UUID | str | inst.PublishInstance) -> bool:
         if isinstance(instance_id, UUID):
             instance_id = str(instance_id)
-        elif isinstance(instance_id, PublishInstance):
+        elif isinstance(instance_id, inst.PublishInstance):
             instance_id = instance_id.id
         return self.instances.get(instance_id) is not None
 
-    def get_instance_by_name(self, name: str) -> PublishInstance | None:
+    def get_instance_by_name(self, name: str) -> inst.PublishInstance | None:
         for inst in self.instances.values():
             if inst.name == name:
                 return inst
         return None
 
-    def iter_instances(self) -> Generator[PublishInstance, None, None]:
+    def iter_instances(self) -> Generator[inst.PublishInstance, None, None]:
         yield from self.instances.values()
 
     @property
