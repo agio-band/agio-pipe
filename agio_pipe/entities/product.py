@@ -16,8 +16,13 @@ class AProduct(DomainBase):
     def get_data(cls, object_id: str | UUID) -> dict:
         return api.pipe.get_product(object_id)
 
-    def update(self, **kwargs) -> None:
-        raise NotImplementedError
+    def update(self, name: str = None, variant: str = None, fields: dict = None, **kwargs) -> None:
+        return api.pipe.update_product(
+            self.id,
+            name=name,
+            variant=variant,
+            fields=fields,
+        )
 
     @classmethod
     def iter(cls,

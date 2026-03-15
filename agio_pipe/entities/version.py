@@ -62,7 +62,7 @@ class AVersion(DomainBase):
         return AVersion(version_id)
 
     def delete(self) -> None:
-        raise NotImplementedError()
+        return api.pipe.delete_version(self.id)
 
     @classmethod
     def find(cls, **kwargs):
