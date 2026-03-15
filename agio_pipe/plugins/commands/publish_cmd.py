@@ -6,6 +6,8 @@ import click
 
 from agio.core.plugins.base_command import ACommandPlugin
 from agio_pipe.publish import publish_core
+from agio.tools import modules
+from agio.tools import qt
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +39,19 @@ class PublishCommand(ACommandPlugin):
             self.start_publish(scene_file, instances, dry_run=dry_run, session_id=session_id, **extra_kwargs)
 
     def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
-        click.secho('Open Publisher Dialog...', fg='yellow')
-        from agio_publish_simple.ui import show_dialog
-        from agio.tools import qt
+        core = publish_core.PublishCore()
+        engine = core.get_engine_plugin()
+        ui_function_import_path = engine.open_ui_function
+        if not ui_function_import_path:
+            raise click.BadParameter(f'No ui_function provided for publish engine {engine}')
+        func = modules.import_object_by_dotted_path(ui_function_import_path)
         try:
-            show_dialog(scene_file, instances, task_id)
+            click.secho('Open Publisher Dialog...', fg='yellow')
+            func(scene_file, instances, task_id)
         except Exception as e:
             traceback.print_exc()
-            qt.show_message_dialog('Error', f'{type(e).__name__}: {e}', level='error')
+            qt.show_message_dialog(str(e), title='Error', level='error')
+            raise click.BadParameter(f'Publish UI opening failed {e}')
 
     def start_publish(self, scene_file: str, instances: tuple, **kwargs):
         click.secho(f'Start Publish...', fg='yellow')
