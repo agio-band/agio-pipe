@@ -12,7 +12,7 @@ from uuid import uuid4, UUID
 from agio.core.entities import AWorkspace
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
-from agio.tools import app_dirs
+from agio.tools import local_dirs
 from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
 from .exceptions import SessionSuspended
@@ -20,7 +20,7 @@ from . import instance as inst
 
 
 class PublishSession:
-    store_path = Path(app_dirs.cache_dir('publish_sessions'))
+    store_path = Path(local_dirs.cache_dir('publish_sessions'))
 
     class STATUS(StrEnum):
         PENDING = 'PENDING'
