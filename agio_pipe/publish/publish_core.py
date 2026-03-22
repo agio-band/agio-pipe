@@ -45,17 +45,17 @@ class PublishCore:
         emit('pipe.publish.before_start', {'publish_options': publish_options})
         # create or restore session
         session = publish_session.PublishSession(session_id=options.pop('session_id', None))
-        # open scene of provided
+        # get publish scene class for current app
+        scene_cls = self.get_scene_api_class(publish_options)
+        scene_plugin = scene_cls()
         if scene_file is not None:
-            # get publish scene class for current app
-            scene_cls = self.get_scene_api_class(publish_options)
-            scene_plugin = scene_cls()
+            # open scene of provided
             scene_plugin.load(scene_file)
-            for cont in scene_plugin.iter_containers():
-                cont: ExportContainerBase
-                inst = instance.PublishInstance.from_export_container(cont)
-                logger.info('Instance created: %s', inst)
-                session.add_instance(inst)
+        for cont in scene_plugin.iter_containers():
+            cont: ExportContainerBase
+            inst = instance.PublishInstance.from_export_container(cont)
+            logger.info('Instance created: %s', inst)
+            session.add_instance(inst)
         if not session.instances:
             raise PublishError('No instances to process')
         publish_plugin = self.get_engine_plugin()
