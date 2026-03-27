@@ -72,6 +72,7 @@ class PublishCore:
         logger.info('Session dump path %s', session.dump_file)
         with session:
             publish_plugin.execute(session, **parameters)
+        logger.info('Finish publishing with engine "%s"', publish_plugin.__class__.__name__)
         return session
 
     def get_engine_name(self, options: dict[str, Any]) -> str:
@@ -87,6 +88,7 @@ class PublishCore:
         if publish_engine_name:
             return publish_engine_name
         raise SettingsParameterNotExists('Parameter "agio_pipe.publish_plugin" is not defined')
+        # TODO: use first if defined only one
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
         engine_name = self.get_engine_name(self._options)
