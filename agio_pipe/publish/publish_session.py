@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import tempfile
 import traceback
 from collections import defaultdict
@@ -18,6 +19,8 @@ from agio.tools.json_serializer import to_simple_dict
 from .exceptions import SessionSuspended
 from . import instance as inst
 
+logger = logging.getLogger(__name__)
+
 
 class PublishSession:
     store_path = Path(local_dirs.cache_dir('publish_sessions'))
@@ -34,7 +37,7 @@ class PublishSession:
         self._data: dict = self._init_session_data(session_id)
         self.settings = self._init_settings(workspace_id)
         self._dry_run = False
-        print('Session path:', self.dump_file)
+        logger.info('Session path: %s', self.dump_file)
 
     def __enter__(self):
         """
@@ -161,7 +164,7 @@ class PublishSession:
         return dict(self._data.get('context', {}))
 
     @property
-    def instances(self):
+    def instances(self) -> dict[str, inst.PublishInstance]:
         return dict(self._data.get('instances', {}))
 
     def add_instance(self, instance: inst.PublishInstance):

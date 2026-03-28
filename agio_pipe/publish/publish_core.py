@@ -54,7 +54,7 @@ class PublishCore:
         for cont in scene_plugin.iter_containers():
             cont: ExportContainerBase
             inst = instance.PublishInstance.from_export_container(cont)
-            logger.info('Instance created: %s', inst)
+            logger.info('Instance created: %s', inst.name)
             session.add_instance(inst)
         if not session.instances:
             raise PublishError('No instances to process')
