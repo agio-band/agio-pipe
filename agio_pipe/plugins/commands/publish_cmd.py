@@ -46,7 +46,7 @@ class PublishCommand(ACommandPlugin):
             raise click.BadParameter(f'No ui_function provided for publish engine {engine}')
         func = modules.import_object_by_dotted_path(ui_function_import_path)
         try:
-            click.secho('Open Publisher Dialog...', fg='yellow')
+            click.secho(f'Open Publisher Dialog for task {task_id}...', fg='yellow')
             func(scene_file, instances, task_id)
         except Exception as e:
             traceback.print_exc()
@@ -57,4 +57,5 @@ class PublishCommand(ACommandPlugin):
         click.secho(f'Start Publish...', fg='yellow')
         # TODO pass options from pipeline settings
         core = publish_core.PublishCore()
-        return core.start_publishing(scene_file=scene_file, selected_instances=instances, **kwargs)
+        session = core.start_publishing(scene_file=scene_file, selected_instances=instances, **kwargs)
+        click.echo(f'Publish Session ID: "{session.id}"')
