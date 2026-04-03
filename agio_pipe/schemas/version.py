@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class AVersionCreateSchema(BaseModel):
     product_id: UUID
     task_id: UUID
+    publish_session_id: UUID
     version: str
     fields: dict|None
 

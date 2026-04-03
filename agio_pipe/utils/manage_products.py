@@ -4,16 +4,16 @@ from pathlib import Path
 import yaml
 
 from agio.core.entities.entity import AEntity
-from agio_pipe.entities.product import AProduct
-from agio_pipe.entities.product_type import AProductType
-from agio_pipe.entities.task import ATask
+from agio.core.entities.product import AProduct
+from agio.core.entities.product_type import AProductType
+from agio.core.entities.task import ATask
 from agio_pipe.publish.instance import PublishInstance
 from .template_solver import TemplateSolver
 
 
 def create_product_from_template(
         product_template: dict,
-        entity: str|AEntity,
+        entity: str | AEntity,
         task: str|ATask = None,
         variant: str = 'main',
         context: dict=None,

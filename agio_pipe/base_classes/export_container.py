@@ -6,8 +6,7 @@ from functools import cache
 from typing import Any
 
 from agio.tools.json_serializer import to_simple_dict
-from agio_pipe.entities import product as product_
-from agio_pipe.entities import task as task_
+from agio.core.entities import task as task_, product as product_
 
 
 class ExportContainerBase(ABC):

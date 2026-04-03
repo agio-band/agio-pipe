@@ -1,8 +1,8 @@
 from typing import Protocol, Generator
 
 from agio_pipe.base_classes.export_container import ExportContainerBase
-from agio_pipe.entities.product import AProduct
-from agio_pipe.entities.task import ATask
+from agio.core.entities.product import AProduct
+from agio.core.entities.task import ATask
 
 
 class PublishScene(Protocol):

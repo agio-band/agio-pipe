@@ -11,12 +11,12 @@ from typing import Any, Generator, Union
 from uuid import uuid4, UUID
 
 from agio.core.entities import AWorkspace
+from agio.core.entities.publish_session import APublishSession
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
 from agio.tools import local_dirs
 from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
-from .exceptions import SessionSuspended
 from . import instance as inst
 
 logger = logging.getLogger(__name__)
@@ -27,31 +27,36 @@ class PublishSession:
 
     class STATUS(StrEnum):
         PENDING = 'PENDING'
-        RUNNING = 'RUNNING'
-        SUSPENDED = 'SUSPENDED'
+        IN_PROGRESS = 'IN_PROGRESS'
         DONE = 'DONE'
         FAILED = 'FAILED'
+        CANCELED = 'CANCELED'
+        SYNC = 'SYNC'
 
-    def __init__(self, session_id: str = None, workspace_id: str = None, **kwargs) -> None:
-        self.id: str = session_id or str(uuid4())
+    def __init__(self, task_id: str|UUID, session_id: str = None, workspace_id: str = None, **kwargs) -> None:
+        self._kwargs = kwargs
+        self._task_id = task_id
+        self.id: str = session_id
         self._data: dict = self._init_session_data(session_id)
         self.settings = self._init_settings(workspace_id)
         self._dry_run = False
-        logger.info('Session path: %s', self.dump_file)
+        self._session: APublishSession|None = None
 
     def __enter__(self):
-        """
-        TODO: Create session in DB
-        """
+        if self.id:
+            self._session = APublishSession(self.id)
+        else:
+            self._session = APublishSession.create(entity_id=self._task_id, comment=self._kwargs.get('comment', ''))
+            self.id = self._session.id
+        self.set_status(self.STATUS.IN_PROGRESS)
+        emit('pipe.publish.publish_process_started', {'session': self._session})
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # TODO: update status in DB
-        if isinstance(exc_tb, SessionSuspended):
-            self.set_status(self.STATUS.SUSPENDED)
-            return True
-        else:
+        if exc_type:
             self.on_error(exc_val)
             return False
+        else:
+            return self.on_success()
 
     def set_dry_run(self, dry_run: bool) -> None:
         self._dry_run = dry_run
@@ -128,6 +133,8 @@ class PublishSession:
 
     @property
     def dump_file(self):
+        if not self.id:
+            raise ValueError('Session instance not initialized yet. No id value.')
         return self.session_file(self.id)
 
     ###########################################################
@@ -135,6 +142,7 @@ class PublishSession:
     def set_status(self, status: STATUS) -> None:
         self._data['status'] = status
         self.dump()
+        self._session.update(state=status)
 
     @property
     def status(self):
@@ -148,6 +156,30 @@ class PublishSession:
             err['traceback'] = ''.join(traceback.format_exception(error))
         self._data['error'] = err
         self.set_status(self.STATUS.FAILED)
+        self._dump_to_db()
+        emit('pipe.publish.publish_process_failed', {'session': self._session})
+
+    def on_success(self):
+        # TODO check versions exists
+        self.set_status(self.STATUS.DONE) # TODO user SYNC status by default
+        self._dump_to_db()
+        emit('pipe.publish.publish_process_done', {'session': self._session})
+        return True
+
+    def _dump_to_db(self):
+        if self._dry_run:
+            return
+        if self._session:
+            ###
+            from pprint import pprint
+            print(' Dump data '.center(150, '='))
+            pprint(self._data)
+            print('='*150)
+            ###
+            # TODO: add logs and data
+            self.set_status(self.status)
+        else:
+            logger.error('Session instance not created')
 
     @property
     def data(self):

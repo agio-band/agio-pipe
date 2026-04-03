@@ -3,11 +3,10 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from agio.core.entities import DomainBase
+from agio.core.entities import BaseObject, version as vers
 from agio_pipe.base_classes.export_container import ExportContainerBase
-from agio_pipe.entities import version as vers
-from agio_pipe.entities.product import AProduct
-from agio_pipe.entities.task import ATask
+from agio.core.entities.product import AProduct
+from agio.core.entities.task import ATask
 
 
 class PublishInstance:
@@ -72,7 +71,7 @@ class PublishInstance:
         instance_data['data'] = instance_data.get('data') or {}
         for k, v in instance_data['data'].items():
             if isinstance(v, dict) and '_' in v:
-                inst_data[k] = DomainBase.deserialize(v)
+                inst_data[k] = BaseObject.deserialize(v)
             else:
                 inst_data[k] = v
         inst = PublishInstance(
@@ -109,7 +108,7 @@ class PublishInstance:
 
     def set_results(self, new_version: vers.AVersion, published_files: list):
         if isinstance(new_version, dict):
-            new_version = DomainBase.deserialize(new_version)
+            new_version = BaseObject.deserialize(new_version)
         self._results = dict(
             new_version=new_version,
             published_files=published_files

@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Generator, Type
+from typing import Generator
 
 from agio.core import chips
 from agio_pipe.base_classes.export_container import ExportContainerBase
 from agio_pipe.base_classes.publish_scene import PublishSceneBase
 from agio_pipe.chips.publish_scene.export_container import ExportContainer
-from agio_pipe.entities import product as product_entity
-from agio_pipe.entities.task import ATask
+from agio.core.entities import product as product_entity
+from agio.core.entities.task import ATask
 from agio_pipe.exceptions import DuplicateError
-from agio_pipe.publish.instance import PublishInstance
 
 
 @chips.register('publish_scene', 'default')

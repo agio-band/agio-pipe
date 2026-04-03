@@ -7,5 +7,13 @@ class PublishEngineBasePlugin(APlugin):
     open_ui_function = None
     parameters = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.session: PublishSession|None = None
+
     def execute(self, session: PublishSession, **options) -> None:
+        self.session = session
+        return self.start_publish(**options)
+
+    def start_publish(self, **options):
         raise NotImplementedError()

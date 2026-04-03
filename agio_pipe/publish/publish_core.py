@@ -14,8 +14,8 @@ from agio.core.settings import settings_hub
 from agio_pipe.base_classes.export_container import ExportContainerBase
 from agio_pipe.exceptions import PublishError
 from agio_pipe.publish import instance
-from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 from agio_pipe.publish import publish_session
+from agio_pipe.publish.publish_engine_base_plugin import PublishEngineBasePlugin
 
 logger = logging.getLogger(__name__)
 
@@ -39,37 +39,50 @@ class PublishCore:
     def options(self):
         return self._options
 
-    def start_publishing(self, scene_file: str | dict = None, **options) -> publish_session.PublishSession:
+    def start_publishing(self,
+                         scene_file: str | dict = None,
+                         selected_instances: list[str] = None,
+                         **options) -> publish_session.PublishSession:
         publish_options = copy.deepcopy(self.options)
         publish_options.update(options)
+
         emit('pipe.publish.before_start', {'publish_options': publish_options})
-        # create or restore session
-        session = publish_session.PublishSession(session_id=options.pop('session_id', None))
         # get publish scene class for current app
         scene_cls = self.get_scene_api_class(publish_options)
         scene_plugin = scene_cls()
         if scene_file is not None:
             # open scene of provided
             scene_plugin.load(scene_file)
+            # else use current opened scene
+        # get task from current scene
+        task_id = scene_plugin.get_task_id()
+        if not task_id:
+            raise PublishError('No task_id provided')
+        # create or restore session
+        session = publish_session.PublishSession(task_id=task_id, **options)
+        # fill instances from scene if exists
         for cont in scene_plugin.iter_containers():
             cont: ExportContainerBase
             inst = instance.PublishInstance.from_export_container(cont)
+            if selected_instances and inst.name in selected_instances:
+                continue
             logger.info('Instance created: %s', inst.name)
             session.add_instance(inst)
+        # check instances
         if not session.instances:
             raise PublishError('No instances to process')
+        # start publish
         publish_plugin = self.get_engine_plugin()
         emit('pipe.publish.publish_plugin_created', {
-            'publish_options': publish_options,
-            'engine': publish_plugin,
-            'session': session,
+             'publish_options': publish_options,
+             'engine': publish_plugin,
+             'session': session,
         })
         logger.info('Start publishing with engine "%s"', publish_plugin.__class__.__name__)
         # start main processing
         parameters = self.get_plugin_parameters()
         parameters.update(publish_options)
         parameters.update(options)
-        logger.info('Session dump path %s', session.dump_file)
         with session:
             publish_plugin.execute(session, **parameters)
         logger.info('Finish publishing with engine "%s"', publish_plugin.__class__.__name__)
@@ -88,7 +101,7 @@ class PublishCore:
         if publish_engine_name:
             return publish_engine_name
         raise SettingsParameterNotExists('Parameter "agio_pipe.publish_plugin" is not defined')
-        # TODO: use first if defined only one
+        # TODO: use first engine if defined only one
 
     def get_engine_plugin(self) -> PublishEngineBasePlugin:
         engine_name = self.get_engine_name(self._options)

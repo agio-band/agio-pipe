@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Any
 from uuid import uuid4
-from agio_pipe.entities.product import AProduct
-from agio_pipe.entities.task import ATask
+from agio.core.entities.product import AProduct
+from agio.core.entities.task import ATask
 from agio_pipe.base_classes.export_container import ExportContainerBase
 
 

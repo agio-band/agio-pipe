@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Generator
+from typing import Generator
 
 from agio_pipe.base_classes.export_container import ExportContainerBase
-from agio_pipe.entities import product as product_entity
-from agio_pipe.entities.task import ATask
+from agio.core.entities import product as product_entity
+from agio.core.entities.task import ATask
 from agio_pipe.exceptions import DuplicateError
 
 
@@ -33,6 +33,13 @@ class PublishSceneBase(ABC):
     def get_export_container_class(self):
         return self.export_container_class
 
+    def get_task_id(self) -> str|None:
+        try:
+            cont = next(self.iter_containers())
+        except StopIteration:
+            return None
+        return cont.get_task().id
+
     def create_container(
             self,
             name:str,
@@ -40,6 +47,10 @@ class PublishSceneBase(ABC):
             product: product_entity.AProduct,
             sources: list[str] = None,
         ) -> ExportContainerBase:
+        current_task = self.get_task_id()
+        if current_task is not None and current_task != task.id:
+            raise DuplicateError(f'One session can accept instances for only one task, '
+                                 f'this session already contain instance with task "{current_task}"')
         cont_cls = self.get_export_container_class()
         cont = cont_cls.create(name=name, task=task, product=product, sources=sources)
         return cont

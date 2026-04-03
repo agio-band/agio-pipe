@@ -27,7 +27,7 @@ class PublishCommand(ACommandPlugin):
     ]
     allow_extra_args = True
 
-    def execute(self, scene_file: str, task_id: str, ui: bool, instances: tuple, dry_run: str, session_id: str, **kwargs):
+    def execute(self, scene_file: str, task_id: str, ui: bool, instances: list[str], dry_run: str, session_id: str, **kwargs):
         if ui:
             self.open_dialog(scene_file, task_id, instances)
         else:
@@ -38,7 +38,7 @@ class PublishCommand(ACommandPlugin):
                 raise click.BadParameter('Extra non keyword arguments provided but not supported')
             self.start_publish(scene_file, instances, dry_run=dry_run, session_id=session_id, **extra_kwargs)
 
-    def open_dialog(self, scene_file: str|None, task_id: str,  instances: tuple[str]):
+    def open_dialog(self, scene_file: str|None, task_id: str,  instances: list[str]):
         core = publish_core.PublishCore()
         engine = core.get_engine_plugin()
         ui_function_import_path = engine.open_ui_function
@@ -53,7 +53,7 @@ class PublishCommand(ACommandPlugin):
             qt.show_message_dialog(str(e), title='Error', level='error')
             raise click.BadParameter(f'Publish UI opening failed {e}')
 
-    def start_publish(self, scene_file: str, instances: tuple, **kwargs):
+    def start_publish(self, scene_file: str, instances: list[str]|None, **kwargs):
         click.secho(f'Start Publish...', fg='yellow')
         # TODO pass options from pipeline settings
         core = publish_core.PublishCore()

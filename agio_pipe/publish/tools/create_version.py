@@ -1,7 +1,7 @@
 import logging
 
-from agio_pipe.entities.published_file import APublishedFile
-from agio_pipe.entities.version import AVersion
+from agio.core.entities.published_file import APublishedFile
+from agio.core.entities.version import AVersion
 from agio_pipe.schemas.version import PublishedFileFull
 
 
@@ -11,12 +11,14 @@ logger = logging.getLogger(__name__)
 def create_product_version(
         product_id: str,
         task_id: str,
+        publish_session_id: str,
         version: int,
         project_files: list[PublishedFileFull],
     ) -> tuple[AVersion, list[dict]]:
         version = AVersion.create(
             product_id=product_id,
             task_id=task_id,
+            publish_session_id=publish_session_id,
             version=version,
         )
         files = []
