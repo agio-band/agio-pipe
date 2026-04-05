@@ -12,12 +12,16 @@ from uuid import uuid4, UUID
 
 from agio.core.entities import AWorkspace
 from agio.core.entities.publish_session import APublishSession
+from agio.core.entities.version import AVersion
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
 from agio.tools import local_dirs
 from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
 from . import instance as inst
+from .instance import PublishInstance
+from .tools.create_version import create_product_version
+from ..exceptions import PublishError
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +37,18 @@ class PublishSession:
         CANCELED = 'CANCELED'
         SYNC = 'SYNC'
 
-    def __init__(self, task_id: str|UUID, session_id: str = None, workspace_id: str = None, **kwargs) -> None:
+    def __init__(self, session_id: str = None, task_id: str|UUID = None, workspace_id: str = None, **kwargs) -> None:
         self._kwargs = kwargs
-        self._task_id = task_id
         self.id: str = session_id
         self._data: dict = self._init_session_data(session_id)
+        if self._data:
+            if task_id and task_id != self._data.get('task_id'):
+                raise ValueError(f'Session {session_id} already used with task_id: {self._data.get("task_id")}')
+            self._task_id = self._data.get('task_id')
+        else:
+            if not task_id:
+                raise ValueError('Task ID is required for publish session')
+            self._task_id = task_id
         self.settings = self._init_settings(workspace_id)
         self._dry_run = False
         self._session: APublishSession|None = None
@@ -100,6 +111,7 @@ class PublishSession:
             raise TypeError(f'Cant serialize to dict: {type(obj)} {obj}')
         return {
             'id': self.id,
+            'task_id': self._task_id,
             **to_simple_dict(self._data, entity_encode)
         }
 
@@ -166,6 +178,38 @@ class PublishSession:
         emit('pipe.publish.publish_process_done', {'session': self._session})
         return True
 
+    def create_versions(self, instances: list[PublishInstance]) -> list[AVersion]:
+        """Create versions in database"""
+        created: list[tuple[AVersion, PublishInstance]] = []
+        for instance in instances:
+            if not instance.get_value('product_outputs'):
+                raise PublishError(f'Instance has no product outputs {instance}')
+        try:
+            for instance in instances:
+                version, files = create_product_version(
+                    product_id=instance.product.id,
+                    task_id=instance.task.id,
+                    version=instance.version,
+                    project_files=instance.get_value('product_outputs'),
+                    publish_session_id=self.id
+                )
+                instance.set_results(version, files)
+                created.append((version, instance))
+        except Exception:
+            logger.error(
+                'Failed to create new version. Early created versions in current session will be deleted.')
+            for version, instance in created:
+                version.delete()
+            raise
+        for version, instance in created:
+            emit('pipe.publish.version_created', {
+                'version': version,
+                'instance': instance,
+                'session': self
+            })
+            logger.info('Created new version: %s', repr(version))
+        return [x[0] for x in created]
+
     def _dump_to_db(self):
         if self._dry_run:
             return
@@ -173,7 +217,7 @@ class PublishSession:
             ###
             from pprint import pprint
             print(' Dump data '.center(150, '='))
-            pprint(self._data)
+            print(json.dumps(self.serialize(), indent=1))
             print('='*150)
             ###
             # TODO: add logs and data

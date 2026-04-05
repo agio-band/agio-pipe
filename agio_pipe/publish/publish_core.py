@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from agio.core.chips import chips_hub
 from agio.core.entities import AWorkspace
-from agio.core.events import emit
+from agio.core.events import emit, subscribe_manager, AEvent
 from agio.core.exceptions import SettingsParameterNotExists
 from agio.core.plugins import plugin_hub
 from agio.core.settings import settings_hub
@@ -83,8 +83,18 @@ class PublishCore:
         parameters = self.get_plugin_parameters()
         parameters.update(publish_options)
         parameters.update(options)
-        with session:
-            publish_plugin.execute(session, **parameters)
+
+        def on_instances_ready(event: AEvent):
+            """Callback for create versions"""
+            versions = session.create_versions(event.payload['instances'])
+            event.payload['versions'] = versions
+            emit('pipe.publish.product_versions_created', event.payload)
+
+        with subscribe_manager(
+                'pipe.publish.product_outputs_created',
+                on_instances_ready, raise_error=True):
+            with session:
+                publish_plugin.execute(session, **parameters)
         logger.info('Finish publishing with engine "%s"', publish_plugin.__class__.__name__)
         return session
 
