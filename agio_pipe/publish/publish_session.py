@@ -8,18 +8,19 @@ from collections import defaultdict
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Generator, Union
-from uuid import uuid4, UUID
+from uuid import UUID
 
-from agio.core.entities import AWorkspace
+from agio.core.entities import AWorkspace, AEntity
 from agio.core.entities.publish_session import APublishSession
 from agio.core.entities.version import AVersion
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
-from agio.tools import local_dirs
 from agio.tools.data_helpers import deep_tree
 from agio.tools.json_serializer import to_simple_dict
+from agio_pipe.utils import template_solver
 from . import instance as inst
 from .instance import PublishInstance
+from .session_store import SessionStore
 from .tools.create_version import create_product_version
 from ..exceptions import PublishError
 
@@ -27,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class PublishSession:
-    store_path = Path(local_dirs.cache_dir('publish_sessions'))
 
     class STATUS(StrEnum):
         PENDING = 'PENDING'
@@ -37,9 +37,12 @@ class PublishSession:
         CANCELED = 'CANCELED'
         SYNC = 'SYNC'
 
-    def __init__(self, session_id: str = None, task_id: str|UUID = None, workspace_id: str = None, **kwargs) -> None:
+    def __init__(self, session_id: str = None, task_id: str|UUID = None,
+                 workspace_id: str = None, store_helper_class = None, **kwargs) -> None:
         self._kwargs = kwargs
         self.id: str = session_id
+        self._store_class = store_helper_class or SessionStore
+        self.store_helper = None
         self._data: dict = self._init_session_data(session_id)
         if self._data:
             if task_id and task_id != self._data.get('task_id'):
@@ -52,15 +55,26 @@ class PublishSession:
         self.settings = self._init_settings(workspace_id)
         self._dry_run = False
         self._session: APublishSession|None = None
+        self._versions = []
+
+    def _set_id(self, session_id):
+        """Set id and recreate helper"""
+        self.id = session_id
+        self.store_helper = self._store_class(session_id)
 
     def __enter__(self):
         if self.id:
             self._session = APublishSession(self.id)
         else:
-            self._session = APublishSession.create(entity_id=self._task_id, comment=self._kwargs.get('comment', ''))
-            self.id = self._session.id
+            self._session = APublishSession.create(
+                entity_id=self._task_id,
+                name=self.publication_name,
+                version=self.publication_version,
+                comment=self._kwargs.get('comment', '')
+            )
+            self._set_id(self._session.id)
         self.set_status(self.STATUS.IN_PROGRESS)
-        emit('pipe.publish.publish_process_started', {'session': self._session})
+        emit('pipe.publish.publish_process_started', {'session': self})
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
@@ -80,10 +94,9 @@ class PublishSession:
 
     def _init_session_data(self, session_id: str = None) -> defaultdict:
         session_data = deep_tree()
-        if session_id is None:
-            return session_data
-        else:
-            data = self._load_from_file(session_id)
+        if session_id is not None:
+            self._set_id(session_id)
+            data = self.store_helper.load()
             self.id = data.pop('id')
             session_data.update(data)
             if session_data['instances']:
@@ -92,6 +105,8 @@ class PublishSession:
                     for inst_id, data in session_data['instances'].items()
                 }
             return session_data
+        else:
+            return session_data
 
     def _init_settings(self, workspace_id: str) -> WorkspaceSettingsHub:
         if workspace_id is None:
@@ -99,6 +114,38 @@ class PublishSession:
         else:
             ws = AWorkspace(workspace_id)
         return ws.get_current_revision().get_settings()
+
+    @property
+    def publication_version(self) -> int:
+        if 'publication_version' not in self._data:
+            self._data['publication_version'] = APublishSession.get_next_version(self._task_id)
+        return self._data['publication_version']
+
+    @property
+    def publication_name(self):
+        if 'publication_name' not in self._data:
+            self._data['publication_name'] = self.create_name()
+        return self._data['publication_name']
+
+    @property
+    def published_versions(self):
+        return self._versions
+
+    def create_name(self):
+        template = self.settings.get('agio_pipe.publication_name_template')
+        templates = {
+            'default': template
+        }
+        context = self.get_session_context()
+        solver = template_solver.TemplateSolver(templates)
+        solved_name = solver.solve('default', context)
+        return solved_name
+
+    def get_session_context(self) -> dict:
+        return {
+            'publication_entity': AEntity.from_id(self._task_id),
+            'publication_version': self.publication_version,
+        }
 
     def serialize(self):
         return self.to_dict()
@@ -109,6 +156,7 @@ class PublishSession:
             if hasattr(obj, 'serialize'):
                 return obj.serialize()
             raise TypeError(f'Cant serialize to dict: {type(obj)} {obj}')
+
         return {
             'id': self.id,
             'task_id': self._task_id,
@@ -119,35 +167,7 @@ class PublishSession:
         if self._dry_run:
             return None
         data = self.serialize()
-        session_path = self.session_file(self.id)
-        session_path.parent.mkdir(parents=True, exist_ok=True)
-        with session_path.open('w') as session_file:
-            json.dump(data, session_file, indent=2, ensure_ascii=False)
-        return session_path
-
-    @classmethod
-    def load(cls, session_id: str = None) -> PublishSession:
-        session = cls(session_id)
-        return session
-
-    @classmethod
-    def _load_from_file(cls, instance_id: str):
-        session_path = cls.session_file(instance_id)
-        if not session_path.exists():
-            raise FileNotFoundError(f"Session file not found: {session_path}")
-        with open(session_path) as session_file:
-            session_dict = json.load(session_file)
-        return session_dict
-
-    @classmethod
-    def session_file(cls, session_id: str) -> Path:
-        return cls.store_path.joinpath(session_id).with_suffix('.json')
-
-    @property
-    def dump_file(self):
-        if not self.id:
-            raise ValueError('Session instance not initialized yet. No id value.')
-        return self.session_file(self.id)
+        return self.store_helper.dump(data)
 
     ###########################################################
 
@@ -169,13 +189,13 @@ class PublishSession:
         self._data['error'] = err
         self.set_status(self.STATUS.FAILED)
         self._dump_to_db()
-        emit('pipe.publish.publish_process_failed', {'session': self._session})
+        emit('pipe.publish.publish_process_failed', {'session': self})
 
     def on_success(self):
         # TODO check versions exists
         self.set_status(self.STATUS.DONE) # TODO user SYNC status by default
         self._dump_to_db()
-        emit('pipe.publish.publish_process_done', {'session': self._session})
+        emit('pipe.publish.publish_process_done', {'session': self})
         return True
 
     def create_versions(self, instances: list[PublishInstance]) -> list[AVersion]:
@@ -208,14 +228,14 @@ class PublishSession:
                 'session': self
             })
             logger.info('Created new version: %s', repr(version))
-        return [x[0] for x in created]
+        self._versions = [x[0] for x in created]
+        return self._versions
 
     def _dump_to_db(self):
         if self._dry_run:
             return
         if self._session:
             ###
-            from pprint import pprint
             print(' Dump data '.center(150, '='))
             print(json.dumps(self.serialize(), indent=1))
             print('='*150)
