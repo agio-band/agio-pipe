@@ -6,12 +6,14 @@ import tempfile
 import traceback
 from collections import defaultdict
 from enum import StrEnum
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Generator, Union
 from uuid import UUID
 
 from agio.core.entities import AWorkspace, AEntity
 from agio.core.entities.publish_session import APublishSession
+from agio.core.entities.task import ATask
 from agio.core.entities.version import AVersion
 from agio.core.events import emit
 from agio.core.settings.settings_hub import WorkspaceSettingsHub
@@ -108,12 +110,12 @@ class PublishSession:
         else:
             return session_data
 
-    def _init_settings(self, workspace_id: str) -> WorkspaceSettingsHub:
+    def _init_settings(self, workspace_id: str|None = None) -> WorkspaceSettingsHub:
         if workspace_id is None:
-            ws = AWorkspace.current()
+            return self.task.project.get_settings()
         else:
             ws = AWorkspace(workspace_id)
-        return ws.get_current_revision().get_settings()
+            return ws.get_current_revision().get_settings()
 
     @property
     def publication_version(self) -> int:
@@ -140,6 +142,10 @@ class PublishSession:
         solver = template_solver.TemplateSolver(templates)
         solved_name = solver.solve('default', context)
         return solved_name
+
+    @cached_property
+    def task(self):
+        return ATask(self._task_id)
 
     def get_session_context(self) -> dict:
         return {
