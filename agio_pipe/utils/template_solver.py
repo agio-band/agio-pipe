@@ -226,13 +226,17 @@ class TemplateSolver:
                     template_name = token.solve(context)
                     value = self.solve(template_name, context, **kwargs)
                 else:
-                    if kwargs.get('keep_missing'):
+                    if kwargs.get('keep_missing') and not (isinstance(token, TokenOptional) and not kwargs.get('keep_optional', True)):
                         # force raise error for non exists variable to pass through raw value
                         kwargs['skip_empty_values'] = True
                     value = token.solve(context, **kwargs)
-            except (VariableNotFoundError, TemplateNotFoundError):
+            except (VariableNotFoundError, TemplateNotFoundError, EmptyValueError):
                 if kwargs.get('keep_missing', False):
-                    value = token.raw_value
+                    if not (isinstance(token, TokenOptional) and not kwargs.get('keep_optional', True)):
+                        value = token.raw_value
+                    else:
+                        # skip optional variable if value is not found
+                        value = ''
                 else:
                     raise
             tmpl = tmpl.replace(holder, str(value))
@@ -241,16 +245,17 @@ class TemplateSolver:
             tmpl = re.sub(r"\\\\+", r"\\", re.sub(r"//+", r"/", tmpl))
         return tmpl
 
-    def solve_partial(self, template_name: str, context: dict, **kwargs) -> str:
+    def solve_partial(self, template_name: str, context: dict, keep_optional=True, **kwargs) -> str:
         """
         Expand external templates
         Solve existing variables
         Keep missing variables
         """
         kwargs['keep_missing'] = True
+        kwargs['keep_optional'] = keep_optional
         return self.solve(template_name, context, **kwargs)
 
-    def tokenize_string(self, raw_template: str) -> (dict, str):
+    def tokenize_string(self, raw_template: str) -> tuple[dict, str]:
         raw_tokens = {}
         index = 0
         it = 0
@@ -298,3 +303,11 @@ if __name__ == '__main__':
     ts = TemplateSolver(templates)
     print(ts.solve('publish', ctx))
     print(ts.solve('full', ctx))
+
+    ctx_partial = {
+        'project': {'name': "TEST "},
+        'root': {"projects": '/mnt/projects'},
+        'entity': {'name': "Asset1"},
+    }
+    print(ts.solve_partial('full', ctx_partial, keep_optional=True))
+    print(ts.solve_partial('full', ctx_partial, keep_optional=False))
