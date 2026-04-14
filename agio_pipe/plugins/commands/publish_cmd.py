@@ -7,7 +7,6 @@ import click
 from agio.core.plugins.base_command import ACommandPlugin
 from agio_pipe.publish import publish_core
 from agio.tools import modules
-from agio.tools import qt
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,8 @@ class PublishCommand(ACommandPlugin):
             click.secho(f'Open Publisher Dialog for task {task_id}...', fg='yellow')
             func(scene_file, instances, task_id)
         except Exception as e:
+            from agio.tools import qt
+            # TODO use console output if qt is not available
             traceback.print_exc()
             qt.show_message_dialog(str(e), title='Error', level='error')
             raise click.BadParameter(f'Publish UI opening failed {e}')
