@@ -58,6 +58,7 @@ class PublishSession:
         self._dry_run = False
         self._session: APublishSession|None = None
         self._versions = []
+        self.__is_context_manager_opened = False
 
     def _set_id(self, session_id):
         """Set id and recreate helper"""
@@ -66,19 +67,22 @@ class PublishSession:
 
     def __enter__(self):
         if self.id:
-            self._session = APublishSession(self.id)
+            self._session = APublishSession(self.id, client=self.client)
         else:
             self._session = APublishSession.create(
                 entity_id=self._task_id,
                 name=self.publication_name,
                 version=self.publication_version,
-                comment=self._kwargs.get('comment', '')
+                comment=self._kwargs.get('comment', ''),
+                client=self.client,
             )
             self._set_id(self._session.id)
         self.set_status(self.STATUS.IN_PROGRESS)
+        self.__is_context_manager_opened = True
         emit('pipe.publish.publish_process_started', {'session': self})
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__is_context_manager_opened = False
         if exc_type:
             self.on_error(exc_val)
             return False
@@ -114,13 +118,13 @@ class PublishSession:
         if workspace_id is None:
             return self.task.project.get_settings()
         else:
-            ws = AWorkspace(workspace_id)
+            ws = AWorkspace(workspace_id, client=self.client)
             return ws.get_current_revision().get_settings()
 
     @property
     def publication_version(self) -> int:
         if 'publication_version' not in self._data:
-            self._data['publication_version'] = APublishSession.get_next_version(self._task_id)
+            self._data['publication_version'] = APublishSession.get_next_version(self._task_id, client=self.client)
         return self._data['publication_version']
 
     @property
@@ -144,12 +148,16 @@ class PublishSession:
         return solved_name
 
     @cached_property
+    def client(self):
+        return self._kwargs.get('client')
+
+    @cached_property
     def task(self):
-        return ATask(self._task_id)
+        return ATask(self._task_id, client=self.client)
 
     def get_session_context(self) -> dict:
         return {
-            'publication_entity': AEntity.from_id(self._task_id),
+            'publication_entity': AEntity.from_id(self._task_id, client=self.client),
             'publication_version': self.publication_version,
         }
 
@@ -206,6 +214,10 @@ class PublishSession:
 
     def create_versions(self, instances: list[PublishInstance]) -> list[AVersion]:
         """Create versions in database"""
+        if not self.__is_context_manager_opened:
+            raise PublishError('Session context manager is not opened')
+        if not instances:
+            raise PublishError('No instances to create versions')
         created: list[tuple[AVersion, PublishInstance]] = []
         for instance in instances:
             if not instance.get_value('product_outputs'):

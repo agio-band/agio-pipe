@@ -16,6 +16,7 @@ class PublishInstance:
             product: AProduct,
             sources: list[str],
             name: str = None,
+            version: int = None,
             id: str = None,
             options: dict[str, Any] = None,
             dependencies: list[str] = None,
@@ -29,7 +30,7 @@ class PublishInstance:
         self.options = options or {}
         self.dependencies = dependencies or []
         self.data = data or {}
-        self._version = None
+        self._version = version
         self._results = {}
         self._enabled = True
 
