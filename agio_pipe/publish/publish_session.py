@@ -40,8 +40,11 @@ class PublishSession:
         SYNC = 'SYNC'
 
     def __init__(self, session_id: str = None, task_id: str|UUID = None,
-                 workspace_id: str = None, store_helper_class = None, **kwargs) -> None:
+                 workspace_id: str = None, store_helper_class = None,
+                 delete_on_error: bool = False,
+                 **kwargs) -> None:
         self._kwargs = kwargs
+        self.delete_on_error = delete_on_error
         self.id: str = session_id
         self._store_class = store_helper_class or SessionStore
         self.store_helper = None
@@ -195,14 +198,17 @@ class PublishSession:
         return self._data.get('status') or self.STATUS.PENDING
 
     def on_error(self, error: Union[str, type[BaseException]]) -> None:
-        err = {
-            'message': str(error),
-        }
-        if isinstance(error, Exception):
-            err['traceback'] = ''.join(traceback.format_exception(error))
-        self._data['error'] = err
-        self.set_status(self.STATUS.FAILED)
-        self._dump_to_db()
+        if self.delete_on_error:
+            self._session.delete()
+        else:
+            err = {
+                'message': str(error),
+            }
+            if isinstance(error, Exception):
+                err['traceback'] = ''.join(traceback.format_exception(error))
+            self._data['error'] = err
+            self.set_status(self.STATUS.FAILED)
+            self._dump_to_db()
         emit('pipe.publish.publish_process_failed', {'session': self})
 
     def on_success(self):
