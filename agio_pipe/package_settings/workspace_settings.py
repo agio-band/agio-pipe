@@ -1,4 +1,5 @@
-from enum import StrEnum, auto
+from enum import auto
+from agio.tools.enum import StrEnum
 from typing import Optional
 
 from agio.core.settings import APackageSettings, JSONField, PluginSelectField, ListField, StringField

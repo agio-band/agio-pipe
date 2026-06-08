@@ -5,7 +5,7 @@ import logging
 import tempfile
 import traceback
 from collections import defaultdict
-from enum import StrEnum
+from agio.tools.enum import StrEnum
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Generator, Union
