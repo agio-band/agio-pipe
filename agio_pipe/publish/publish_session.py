@@ -26,12 +26,10 @@ from .session_store import SessionStore
 from .tools.create_version import create_product_version
 from ..exceptions import PublishError
 
-logger = logging.getLogger(__name__)
-
 
 class PublishSession:
 
-    class STATUS(StrEnum):
+    class STATE(StrEnum):
         PENDING = 'PENDING'
         IN_PROGRESS = 'IN_PROGRESS'
         DONE = 'DONE'
@@ -42,8 +40,10 @@ class PublishSession:
     def __init__(self, session_id: str = None, task_id: str|UUID = None,
                  workspace_id: str = None, store_helper_class = None,
                  delete_on_error: bool = False,
+                 session_logger=None,
                  **kwargs) -> None:
         self._kwargs = kwargs
+        self.logger = session_logger or logging.getLogger(__name__)
         self.delete_on_error = delete_on_error
         self.id: str = session_id
         self._store_class = store_helper_class or SessionStore
@@ -62,11 +62,17 @@ class PublishSession:
         self._session: APublishSession|None = None
         self._versions = []
         self.__is_context_manager_opened = False
+        self._statuses_on_complete = {}
 
     def _set_id(self, session_id):
         """Set id and recreate helper"""
         self.id = session_id
         self.store_helper = self._store_class(session_id)
+
+    def __call__(self, task_status: str = None, publication_status: str = None):
+        self._statuses_on_complete['task_status'] = task_status
+        self._statuses_on_complete['publication_status'] = publication_status
+        return self
 
     def __enter__(self):
         if self.id:
@@ -80,7 +86,7 @@ class PublishSession:
                 client=self.client,
             )
             self._set_id(self._session.id)
-        self.set_status(self.STATUS.IN_PROGRESS)
+        self.set_state(self.STATE.IN_PROGRESS)
         self.__is_context_manager_opened = True
         emit('pipe.publish.publish_process_started', {'session': self})
 
@@ -188,14 +194,15 @@ class PublishSession:
 
     ###########################################################
 
-    def set_status(self, status: STATUS) -> None:
-        self._data['status'] = status
+    def set_state(self, state: STATE) -> None:
+        self.STATE(state)
+        self._data['state'] = state
         self.dump()
-        self._session.update(state=status)
+        self._session.update(state=str(state))
 
     @property
-    def status(self):
-        return self._data.get('status') or self.STATUS.PENDING
+    def state(self):
+        return self._data.get('state') or self.STATE.PENDING
 
     def on_error(self, error: Union[str, type[BaseException]]) -> None:
         if self.delete_on_error:
@@ -207,14 +214,29 @@ class PublishSession:
             if isinstance(error, Exception):
                 err['traceback'] = ''.join(traceback.format_exception(error))
             self._data['error'] = err
-            self.set_status(self.STATUS.FAILED)
+            self.set_state(self.STATE.FAILED)
             self._dump_to_db()
         emit('pipe.publish.publish_process_failed', {'session': self})
 
     def on_success(self):
         # TODO check versions exists
-        self.set_status(self.STATUS.DONE) # TODO user SYNC status by default
+        self.set_state(self.STATE.DONE) # TODO user SYNC state by default
         self._dump_to_db()
+        # set status
+
+        final_task_status = self._statuses_on_complete.get('task_status')
+        if final_task_status:
+            try:
+                self.task.set_status(final_task_status)
+            except Exception:
+                self.logger.exception(f'Task status changing to {final_task_status} failed.')
+        publication_status = self._statuses_on_complete.get('publication_status')
+        if publication_status:
+            try:
+                self._session.set_status(publication_status)
+            except Exception:
+                self.logger.exception(f'Session status changing to {publication_status} failed.')
+
         emit('pipe.publish.publish_process_done', {'session': self})
         return True
 
@@ -240,7 +262,7 @@ class PublishSession:
                 instance.set_results(version, files)
                 created.append((version, instance))
         except Exception:
-            logger.error(
+            self.logger.error(
                 'Failed to create new version. Early created versions in current session will be deleted.')
             for version, instance in created:
                 version.delete()
@@ -251,7 +273,7 @@ class PublishSession:
                 'instance': instance,
                 'session': self
             })
-            logger.info('Created new version: %s', repr(version))
+            self.logger.info('Created new version: %s', repr(version))
         self._versions = [x[0] for x in created]
         return self._versions
 
@@ -265,9 +287,9 @@ class PublishSession:
             print('='*150)
             ###
             # TODO: add logs and data
-            self.set_status(self.status)
+            self.set_state(self.state)
         else:
-            logger.error('Session instance not created')
+            self.logger.error('Session instance not created')
 
     @property
     def data(self):
