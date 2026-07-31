@@ -50,7 +50,7 @@ class PipeWorkspaceSettings(APackageSettings):
     review_templates: Optional[list[ReviewTemplates]] = ListField(default=list)
     # publish processing
     publish_templates: Optional[list[PublishPathTemplate]] = ListField(default=list)
-    publication_name_template: str = '{publication_entity.parent.name}_{publication_entity.name}_v{publication_version}' # TODO make as list
+    publication_name_template: str = '{publication_entity.parent.name}_{publication_entity.name}_v{publication_version:03d}' # TODO make as list
     product_name_templates: list[ProductNameTemplate] = ListField(default=list)
     align_product_versions: AlignVersions = AlignVersions.NONE
     # web publisher settings

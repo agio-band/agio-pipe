@@ -147,7 +147,7 @@ class PublishSession:
         return self._versions
 
     def create_name(self):
-        template = self.settings.get('agio_pipe.publication_name_template')
+        template = self.settings.get('publication_name_template')
         templates = {
             'default': template
         }
