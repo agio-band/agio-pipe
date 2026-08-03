@@ -257,7 +257,8 @@ class PublishSession:
                     task_id=instance.task.id,
                     version=instance.version,
                     project_files=instance.get_value('product_outputs'),
-                    publish_session_id=self.id
+                    publish_session_id=self.id,
+                    fields=instance.fields,
                 )
                 instance.set_results(version, files)
                 created.append((version, instance))

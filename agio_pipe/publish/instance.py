@@ -20,7 +20,8 @@ class PublishInstance:
             id: str = None,
             options: dict[str, Any] = None,
             dependencies: list[str] = None,
-            data: dict[str, Any] = None
+            data: dict[str, Any] = None,
+            fields: dict = None,
         ):
         self.id = id or uuid.uuid4().hex
         self.task = ATask(task) if isinstance(task, (str, uuid.UUID)) else task
@@ -30,6 +31,7 @@ class PublishInstance:
         self.options = options or {}
         self.dependencies = dependencies or []
         self.data = data or {}
+        self.fields = fields or {}
         self._version = version
         self._results = {}
         self._enabled = True
@@ -39,6 +41,9 @@ class PublishInstance:
 
     def get_value(self, key: str, default: Any = None) -> Any:
         return self.data.get(key, default)
+
+    def set_field_value(self, key: str, value: Any):
+        self.fields[str(key)] = value
 
     @property
     def version(self):
@@ -58,6 +63,7 @@ class PublishInstance:
             sources=self.sources,
             options=self.options,
             data=self.data,
+            fields=self.fields,
             version=self._version,
             enabled=self._enabled,
         )
@@ -84,6 +90,7 @@ class PublishInstance:
             options=instance_data.get('options') or {},
             dependencies=instance_data.get('dependencies') or [],
             data=inst_data,
+            fields=instance_data.get('fields') or {},
         )
         if 'version' in instance_data:
             inst.set_version(instance_data['version'])

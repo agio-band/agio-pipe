@@ -14,12 +14,14 @@ def create_product_version(
         publish_session_id: str,
         version: int,
         project_files: list[PublishedFileFull],
+        fields: dict = None,
     ) -> tuple[AVersion, list[dict]]:
         version = AVersion.create(
             product_id=product_id,
             task_id=task_id,
             publish_session_id=publish_session_id,
             version=version,
+            fields=fields or {},
         )
         files = []
         for file in project_files:
