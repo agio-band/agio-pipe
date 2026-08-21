@@ -15,7 +15,7 @@ def create_product_from_template(
         product_template: dict,
         entity: str | AEntity,
         task: str|ATask = None,
-        variant: str = 'main',
+        variant: str = '',
         context: dict=None,
         extra_fields: dict = None,
         store_templates: bool = True,
