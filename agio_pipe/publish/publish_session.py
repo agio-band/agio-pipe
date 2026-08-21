@@ -204,6 +204,9 @@ class PublishSession:
     def state(self):
         return self._data.get('state') or self.STATE.PENDING
 
+    def delete(self):
+        return self._session.delete()
+
     def on_error(self, error: Union[str, type[BaseException]]) -> None:
         if self.delete_on_error:
             self._session.delete()
