@@ -2,8 +2,8 @@ from enum import auto
 from agio.tools.enum import StrEnum
 from typing import Optional
 
-from agio.core.settings import APackageSettings, JSONField, PluginSelectField, ListField, StringField
-from pydantic import BaseModel, Field
+from agio.core.settings import APackageSettings, PluginSelectField, ListField, StringField, DictField
+from pydantic import BaseModel
 
 from agio.core.settings.fields.special_fields import ChipSelectField
 
@@ -17,7 +17,7 @@ class AlignVersions(StrEnum):
 class PublishPathTemplate(BaseModel):
     name: str
     path: str = StringField(..., json_schema_extra=dict(widget='PathTemplate'))
-    variables: dict[str, str] = Field(default_factory=dict)
+    variables: dict[str, str] = DictField(default=dict)
 
 
 class ProductNameTemplate(BaseModel):
@@ -38,7 +38,7 @@ class WebProductSettings(BaseModel):
 
 
 class WebPublisherSettings(BaseModel):
-    products: list[WebProductSettings] = Field(default_factory=list)
+    products: list[WebProductSettings] = ListField(default=list)
 
 
 class PipeWorkspaceSettings(APackageSettings):
@@ -51,7 +51,7 @@ class PipeWorkspaceSettings(APackageSettings):
     product_name_templates: list[ProductNameTemplate] = ListField(default=list)
     align_product_versions: AlignVersions = AlignVersions.NONE
     default_variant: str = ''
-    variant_list: list[str] = Field(default_factory=list)
+    variant_list: list[str] = ListField(default=list)
     # web publisher settings
     web_publisher_settings: WebPublisherSettings = WebPublisherSettings()
 
