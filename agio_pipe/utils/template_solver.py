@@ -16,8 +16,10 @@ import re
 from datetime import datetime
 from agio.tools import extract_variable
 
+
 class PathtemplateError(Exception):
     pass
+
 
 class PathTokenizerError(PathtemplateError):
     pass
@@ -111,8 +113,37 @@ class TokenBase:
             if frmt in _format_functions:
                 value = _format_functions[frmt](str(value))
             else:
+                if '{' in frmt:
+                    frmt = self.resolve_nested_formats(frmt, context)
                 value = f"{value:{frmt}}"
         return value
+
+    def resolve_nested_formats(self, frmt: str, context: dict) -> str:
+        """
+        Resolve nested variables inside a format string, e.g. {version:0{pad}d}.
+
+        Repeats passes until no tokens remain, so arbitrarily deep nesting and
+        variables whose own value contains tokens are both supported.
+        """
+        while True:
+            resolved_any = False
+            for token in re.findall(r"\{[^{}]+\}", frmt):
+                try:
+                    parts = self.extract_parts(token)
+                except IncorrectTemplateError:
+                    # literal braces that are not a valid variable - leave as is
+                    continue
+                resolved = self.solve_variable(
+                    parts["name"],
+                    context,
+                    parts["attr"],
+                    parts["formats"],
+                )
+                frmt = frmt.replace(token, str(resolved))
+                resolved_any = True
+            if not resolved_any:
+                break
+        return frmt
 
 
 class TokenRegular(TokenBase):
@@ -122,13 +153,36 @@ class TokenRegular(TokenBase):
         r"}",       # closing parenthesis
         re.VERBOSE)
 
+    @classmethod
+    def _scan_balanced_braces(cls, value: str):
+        """Return the full balanced {...} token starting at a leading '{'."""
+        depth = 0
+        for i, ch in enumerate(value):
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    return value[:i + 1]
+        return None
+
+    @classmethod
+    def match(cls, value: str):
+        start = value.find('{')
+        if start == -1:
+            return None
+        token = cls._scan_balanced_braces(value[start:])
+        if token:
+            return cls(token)
+        return None
+
     def extract_parts(self, value: str):
         parts = re.search(
             r"\{"
             r"(?P<name>[\w\d._]+)"  # variable name
             r"(?P<attr>\[[\w._'\"]+])?" # variable attribute name
-            r":?(?P<formats>.*?)?"  # formatting
-            r"}",
+            r"(?::(?P<formats>.*))?"  # formatting (may contain nested braces)
+            r"\}",      # closing parenthesis (matches the final balanced brace)
             value, re.VERBOSE)
         if not parts:
             raise IncorrectTemplateError
@@ -153,6 +207,13 @@ class TokenOptional(TokenRegular):
         r")",
         re.VERBOSE
     )
+
+    @classmethod
+    def match(cls, value: str):
+        match = cls.pattern.search(value)
+        if match:
+            return cls(match.group(0))
+        return None
 
     def solve(self, context: dict, **kwargs):
         match = re.match(
@@ -189,7 +250,7 @@ class TokenExternal(TokenBase):
         re.VERBOSE
     )
 
-    def solve(self, context: dict):
+    def solve(self, context: dict, **kwargs):
         match = re.match(r"<([\w_\-]+)>", self.value)
         if match:
             return match.group(1)
