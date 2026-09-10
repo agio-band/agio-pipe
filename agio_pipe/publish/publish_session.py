@@ -147,13 +147,28 @@ class PublishSession:
         return self._versions
 
     def create_name(self):
-        template = self.settings.get('agio_pipe.publication_name_template')
-        templates = {
-            'default': template
-        }
+        # template name
+        template_name = 'default' # TODO
+        template_name = emit(
+            'pipe.publish.publish_session_template_name',
+            {'publication_name_template': template_name}
+        ).payload.get('publication_name_template')
+
+        # templates
+        templates: list = self.settings.get('agio_pipe.publication_name_templates')
+
+        # context
         context = self.get_session_context()
-        solver = template_solver.TemplateSolver(templates)
-        solved_name = solver.solve('default', context)
+        emit('pipe.publish.publish_session_context_created', {'context': context}, mutable=True)
+
+        # solve
+        solver = template_solver.TemplateSolver({t.name: t.template for t in templates})
+        solved_name = solver.solve(template_name, context)
+        solved_name = emit(
+            'pipe.publish.publish_session_name_created',
+            {'session_name': solved_name},
+        ).payload.get('session_name')
+
         return solved_name
 
     @cached_property
@@ -165,9 +180,11 @@ class PublishSession:
         return ATask(self._task_id, client=self.client)
 
     def get_session_context(self) -> dict:
+        padding_value = self.settings.get('agio_pipe.default_version_padding', default=3)
         return {
             'publication_entity': AEntity.from_id(self._task_id, client=self.client),
             'publication_version': self.publication_version,
+            'version_padding': padding_value,
         }
 
     def serialize(self):
