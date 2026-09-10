@@ -3,7 +3,7 @@ from agio.tools.enum import StrEnum
 from typing import Optional
 
 from agio.core.settings import APackageSettings, PluginSelectField, ListField, StringField, DictField
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agio.core.settings.fields.special_fields import ChipSelectField
 
@@ -14,20 +14,29 @@ class AlignVersions(StrEnum):
     ALL = auto() # published products and session
 
 
-class PublishPathTemplate(BaseModel):
+class TemplateString(BaseModel):
     name: str
-    path: str = StringField(..., json_schema_extra=dict(widget='PathTemplate'))
-    variables: dict[str, str] = DictField(default=dict)
+    template: str = Field(..., json_schema_extra=dict(widget='Template'))
+    variables: dict[str, str] = Field(default=dict)
 
 
-class ProductNameTemplate(BaseModel):
-    name: str
-    pattern: str
+class PublicationNameTemplate(TemplateString):
+    pass
+
+
+class PublishPathTemplate(TemplateString):
+    pass
+
+
+class ProductNameTemplate(TemplateString):
+    pass
 
 
 class ReviewTemplates(BaseModel):
     name: str
-    template: dict
+    template: dict = DictField(..., json_schema_extra=dict(widget='Template'))
+    variables: dict[str, str] = Field(default_factory=dict)
+    defaults: dict[str, str] = Field(default_factory=dict)
 
 
 class WebProductSettings(BaseModel):
@@ -41,16 +50,28 @@ class WebPublisherSettings(BaseModel):
     products: list[WebProductSettings] = ListField(default=list)
 
 
+def _default_publication_name():
+    return [PublicationNameTemplate(
+        name='default',
+        template='{publication_entity.parent.name}_'
+                 '{publication_entity.name}_'
+                 'v{publication_version:0{version_padding}d}'
+    )]
+
+
 class PipeWorkspaceSettings(APackageSettings):
     # plugins and chips
     publish_plugin: str = PluginSelectField('publish_engine')
     publish_scene_chip: str = ChipSelectField('publish_scene', default='default')
+
     # publish processing
-    publish_templates: Optional[list[PublishPathTemplate]] = ListField(default=list)
-    publication_name_template: str = '{publication_entity.parent.name}_{publication_entity.name}_v{publication_version:03d}' # TODO make as list
+    publication_name_templates: list[PublicationNameTemplate] = ListField(default=_default_publication_name)
     product_name_templates: list[ProductNameTemplate] = ListField(default=list)
+    publish_templates: Optional[list[PublishPathTemplate]] = ListField(default=list)
     align_product_versions: AlignVersions = AlignVersions.NONE
     default_variant: str = ''
+    default_frame_padding: int = 4
+    default_version_padding: int = 3
     variant_list: list[str] = ListField(default=list)
     # web publisher settings
     web_publisher_settings: WebPublisherSettings = WebPublisherSettings()
@@ -59,4 +80,6 @@ class PipeWorkspaceSettings(APackageSettings):
     # templates
     apply_burn_in: bool = True
     review_templates: Optional[list[ReviewTemplates]] = ListField(default=list)
+
+
 
