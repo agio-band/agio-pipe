@@ -246,16 +246,17 @@ class PublishSession:
 
         final_task_status = self._statuses_on_complete.get('task_status')
         if final_task_status:
+            self.logger.info(f'Set task status: {final_task_status!r}')
             try:
                 self.task.set_status(final_task_status)
-            except Exception:
-                self.logger.exception(f'Task status changing to {final_task_status} failed.')
+            except Exception as e:
+                self.logger.exception(f'Task status changing to {final_task_status!r} failed: {e}')
         publication_status = self._statuses_on_complete.get('publication_status')
         if publication_status:
             try:
                 self._session.set_status(publication_status)
-            except Exception:
-                self.logger.exception(f'Session status changing to {publication_status} failed.')
+            except Exception as e:
+                self.logger.exception(f'Session status changing to {publication_status} failed: {e}')
 
         emit('pipe.publish.publish_process_done', {'session': self})
         return True
