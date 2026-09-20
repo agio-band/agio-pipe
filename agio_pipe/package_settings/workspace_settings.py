@@ -47,7 +47,7 @@ class WebProductSettings(BaseModel):
 
 
 class WebPublisherSettings(BaseModel):
-    products: list[WebProductSettings] = ListField(default=list)
+    products: list[WebProductSettings] = Field(default_factory=list)
 
 
 def _default_publication_name():
