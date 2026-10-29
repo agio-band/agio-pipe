@@ -3,10 +3,11 @@ from __future__ import annotations
 import uuid
 from abc import abstractmethod, ABC
 from functools import cache
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from agio.tools.json_serializer import to_simple_dict
-from agio.core.entities import task as task_, product as product_
+if TYPE_CHECKING:
+    from agio.core.entities import ATask, AProduct
 
 
 class ExportContainerBase(ABC):
@@ -17,8 +18,8 @@ class ExportContainerBase(ABC):
     @classmethod
     def create(cls,
                name: str,
-               task: task_.ATask,
-               product: product_.AProduct,
+               task: ATask,
+               product: AProduct,
                sources: list[Any] = None,
                container_id: str = None
         ) -> Any:
@@ -102,13 +103,13 @@ class ExportContainerBase(ABC):
         """
 
     @abstractmethod
-    def set_product(self, product_type: product_.AProduct):
+    def set_product(self, product_type: AProduct):
         """
         Save product type to the container
         """
 
     @abstractmethod
-    def get_product(self) -> product_.AProduct:
+    def get_product(self) -> AProduct:
         """
         Read product type from the container
         """
@@ -120,13 +121,13 @@ class ExportContainerBase(ABC):
         """
 
     @abstractmethod
-    def set_task(self, task: task_.ATask):
+    def set_task(self, task: ATask):
         """
         Save task to the container
         """
 
     @abstractmethod
-    def get_task(self) -> task_.ATask:
+    def get_task(self) -> ATask:
         """
         Read task from the container
         """
