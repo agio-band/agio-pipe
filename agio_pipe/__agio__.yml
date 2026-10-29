@@ -14,7 +14,8 @@ urls:
   bug_tracker: "https://github.com/agio-band/agio-pipe/issues"
 
 callbacks:
-  - plugins/callbacks.py
+  - modules:
+    - plugins/callbacks.py
 
 project_entities_path: entities/*.py
 
